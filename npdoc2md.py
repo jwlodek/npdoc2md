@@ -117,7 +117,6 @@ class ModuleInstance(ItemInstance):
     def convert_to_markdown(self, heading_level: int) -> str:
         md = f'{super().convert_to_markdown(heading_level)}\n\n'
         for instance in self.instance_list:
-            #print(instance.convert_to_markdown(3))
             if isinstance(instance, FunctionInstance):
                 md = f'{md}{instance.convert_to_markdown(3)}\n\n\n'
             elif isinstance(instance, ClassInstance):
@@ -130,7 +129,6 @@ InstanceList = List[ItemInstance]
 
 
 def add_docstring_to_instance(instance: ItemInstance, doc_string: StringList) -> None:
-    print(doc_string)
     current_descriptor = None
     i = 0
     while i < len(doc_string):
@@ -157,9 +155,13 @@ def add_docstring_to_instance(instance: ItemInstance, doc_string: StringList) ->
         i = i + 1
 
 
-def grab_module_instance(file_contents: StringList, file_name: str) -> InstanceList:
+def grab_module_instance(file_contents: StringList, file_name: str, parent_package=None) -> InstanceList:
 
-    top_module_instance = ModuleInstance(file_name)
+    if file_name == '__init__.py' and parent_package is not None:
+        module_name = parent_package + '.py'
+    else:
+        module_name = file_name
+    top_module_instance = ModuleInstance(module_name)
     parent_instance = top_module_instance
     current_instance = None
 
@@ -196,11 +198,12 @@ def grab_module_instance(file_contents: StringList, file_name: str) -> InstanceL
 
 class ConversionItem:
 
-    def __init__(self, file_path: os.PathLike):
+    def __init__(self, file_path: os.PathLike, parent_package: str=None):
+        self.parent_package = parent_package
         self.file_path = file_path
         self.file_name = os.path.basename(self.file_path)
         if self.file_name == '__init__.py':
-            self.file_name = os.path.dirname(self.file_path)
+            self.file_name = os.path.basename(os.path.dirname(self.file_path))
         self.md_file_name = ''
         if self.file_name.endswith('.py'):
             title_elements = self.file_name[:-3].split('_')
@@ -213,14 +216,14 @@ class ConversionItem:
         self.module_instance = None
 
 
-    def collect_docstrings(self):
+    def collect_docstrings(self) -> None:
         item_fp = open(self.file_path, 'r')
         file_contents = item_fp.readlines()
-        self.module_instance = grab_module_instance(file_contents, os.path.basename(self.file_path))
+        self.module_instance = grab_module_instance(file_contents, os.path.basename(self.file_path), parent_package=self.parent_package)
         item_fp.close()
 
 
-    def generate_markdown(self):
+    def generate_markdown(self) -> None:
         self.converted_markdown = self.module_instance.convert_to_markdown(1)
 
 
@@ -265,7 +268,7 @@ def generate_conversion_item_list(target: os.PathLike, ignore_list: StringList) 
         for (root, _, files) in os.walk(target):
             for file in files:
                 if file not in ignore_list and file.endswith('.py'):
-                    conversion_item_list.append(ConversionItem(os.path.abspath(os.path.join(root, file))))
+                    conversion_item_list.append(ConversionItem(os.path.abspath(os.path.join(root, file)), parent_package=os.path.basename(target)))
 
     return conversion_item_list
 
