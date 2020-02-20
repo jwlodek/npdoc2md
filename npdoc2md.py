@@ -186,7 +186,7 @@ class ItemInstance:
             heading = f'#### {descriptor}\n\n'
             for category in docstring_descriptors[descriptor]:
                 md = f' {md} | {category} '
-            md = f'{heading}{md.strip()[1:]}\n{"-----|-----" * len(docstring_descriptors[descriptor])}'
+            md = f'{heading}{md.strip()[1:]}\n{"-----|-----" * (len(docstring_descriptors[descriptor]) - 1)}'
             for descriptor_item in self.descriptors[descriptor]:
                 temp = ''
                 for item_category_value in descriptor_item:
