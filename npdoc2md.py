@@ -1,17 +1,61 @@
 #!/usr/bin/env python3
 
+"""Script for autogenerating markdown documentation given path to python package with numpy-style comments
+
+
+@author: Jakub Wlodek  
+@created: Feb-6-2020
+
+Classes
+-------
+DocStringAttribute
+    Stores docstring attribute and its elements. Ex(Parameters)
+ItemInstance
+    Base class for encountered programmatic instances
+FunctionInstance(ItemInstance)
+    Represents an encountered function or method
+ClassInstance(ItemInstance)
+    Represents an encountered class
+ModuleInstance(ItemInstance)
+    Represents an encountered module
+ConversionItem
+    Single file that needs to be converted. Corresponds to one ModuleInstance object
+MDConverter
+    Main conversion driver class
+
+
+Functions
+---------
+add_docstring_to_instance()
+    Function that parses a docstring into data structures and adds it to instance object
+grab_module_instance()
+    Function that takes a module, and generates all instance objects in a top level module instance
+generate_conversion_item_list()
+    Generates conversion item objects given target
+err_exit()
+    Exits program with an error
+check_input_output_valid()
+    Checks if given inputs are valid
+parse_args()
+    Parses user arguments
+"""
+
+
+# Some standard lib imports
 import os
 import shutil
 import argparse
-
 import logging
 
-
+# Import typing to use python3 typing features
 from typing import List
+StringList = List[str]
 
-
+# Current script version
 __version__ = '0.0.1'
 
+
+# Descriptors possible in docstrings, used for tables
 docstring_descriptors = {
     'Classes'       : ['Class',             'Doc'],
     'Functions'     : ['Function',          'Doc'],
@@ -23,6 +67,15 @@ docstring_descriptors = {
 
 
 class DocStringAttribute:
+    """Stores docstring attribute and its elements. Ex(Parameters)
+
+    Attributes
+    ----------
+    attribute_name : str
+        Name of the attribute
+    attribute_elements : list of list of str
+        List of elements assigned to the attribute for the current instance
+    """
 
     def __init__(self, attribute_name):
         self.attribute_name = attribute_name
@@ -30,25 +83,102 @@ class DocStringAttribute:
 
 
 class ItemInstance:
+    """Base class for encountered programmatic instances
+
+    Attributes
+    ----------
+    name : str
+        Name of the instance (function, class, module name)
+    usage : str
+        How to envoke function, method
+    simple_description : str
+        Base description
+    detailed description : str
+        Additional detailed description
+    descriptiors : dict of str -> DocStringAttribute
+        Map of all docstring attribute descriptors
+
+    Methods
+    -------
+    set_simple_description()
+        Initializes the simple description
+    add_to_detailed_description()
+        Appends to the detailed description
+    add_descriptor()
+        Adds a new descriptor
+    generate_md_table_from_descriptor()
+        Generates markdown table given descriptor
+    get_usage_str()
+        Generates usage markdown
+    convert_to_markdown()
+        Converts current instance state to markdown
+    __format__()
+        Override of base format class
+    """
     
     def __init__(self, name: str, usage: str = None):
+        """Constructor for ItemInstance
+        """
+
         self.name = name
         self.usage = usage
         self.simple_description = ''
         self.detailed_description = ''
         self.descriptors = {}
 
+
     def set_simple_description(self, simple_description: str) -> None:
+        """Initializes the simple description
+
+        Parameters
+        ----------
+        simple_description : str
+            New simple description
+        """
+
         self.simple_description = simple_description
-    
+
+
     def add_to_detailed_description(self, detailed_description_line: str) -> None:
+        """Appends to the detailed description
+        
+        Parameters
+        ----------
+        detailed_description_line : str
+            New description line
+        """
+
         self.detailed_description = f'{self.detailed_description}\n{detailed_description_line}'
 
-    def add_descriptor(self, descriptor_type, descriptor_elements):
+
+    def add_descriptor(self, descriptor_type: str, descriptor_elements: StringList):
+        """Creates a new descriptor
+        
+        Parameters
+        ----------
+        descriptor_type : str
+            New descriptor type
+        descriptor_elements : list of str
+            New descriptor elements
+        """
+
         self.descriptors[descriptor_type] = descriptor_elements
 
 
     def generate_md_table_from_descriptor(self, descriptor: str) -> str:
+        """Generates markdown table for descriptor
+        
+        Parameters
+        ----------
+        descriptor : str
+            Descriptor type
+        
+        Returns
+        -------
+        md : str
+            Markdown string
+        """
+
         md = ''
         if descriptor not in self.descriptors.keys() or descriptor not in docstring_descriptors.keys():
             pass
@@ -66,7 +196,16 @@ class ItemInstance:
 
         return md
 
+
     def get_usage_str(self) -> str:
+        """Gets markdown usage string
+
+        Returns
+        -------
+        md : str
+            Markdown string
+        """
+
         if self.usage is None:
             return ''
         else:
@@ -74,32 +213,93 @@ class ItemInstance:
 
 
     def convert_to_markdown(self, heading_level: int) -> str:
+        """Generates markdown for instance
+
+        Parameters
+        ----------
+        heading_level : int
+            The heading emphasis for the instance
+        
+        Returns
+        -------
+        md : str
+            Markdown string
+        """
+
         md = f'{"#" * heading_level} {self.name}\n\n{self.get_usage_str()}{self.simple_description}\n\n{self.detailed_description}\n\n'
         for descriptor in self.descriptors.keys():
             md = f'{md}{self.generate_md_table_from_descriptor(descriptor)}\n\n'
         md = md + '\n'
         return md
 
+
     def __format__(self, fmt):
+        """Override of standard format function
+
+        Parameters
+        ----------
+        fmt : format
+            The given format
+        """
+
         return f'Instance: {self.name} - {self.simple_description} - {self.descriptors}\n'
 
 
 
 class FunctionInstance(ItemInstance):
+    """Class representing function instances
+    """
+
     def __init__(self, name, usage):
+        """Constructor for function instance
+        """
+
         super().__init__(name, usage=usage)
 
 
 class ClassInstance(ItemInstance):
+    """Class representing class instances
+
+    Methods
+    -------
+    add_sub_instance()
+        Adds a sub-instance (methods)
+    convert_to_markdown()
+        Override of base class, returns its own markdown plus sub instances
+    """
     
     def __init__(self, name, usage):
+        """Constructor for Class instance
+        """
+
         super().__init__(name[:-1], usage=usage)
         self.instance_list = []
 
+
     def add_sub_instance(self, instance: ItemInstance) -> None:
+        """Adds a sub-instance (methods)
+
+        instance : ItemInstance
+            item instance to add as sub-instance
+        """
+
         self.instance_list.append(instance)
 
+
     def convert_to_markdown(self, heading_level: int) -> str:
+        """Override of base class, returns its own markdown plus sub instances
+
+        Parameters
+        ----------
+        heading_level : int
+            The heading emphasis for the instance
+        
+        Returns
+        -------
+        md : str
+            Markdown string
+        """
+
         md = f'{super().convert_to_markdown(heading_level)}\n\n'
         for function_instance in self.instance_list:
             md = f'{md}{function_instance.convert_to_markdown(3)}\n\n\n'
@@ -107,14 +307,48 @@ class ClassInstance(ItemInstance):
 
 
 class ModuleInstance(ItemInstance):
+    """Top Level module instance class
+
+    Methods
+    -------
+    add_sub_instance()
+        Adds a sub-instance (methods)
+    convert_to_markdown()
+        Override of base class, returns its own markdown plus sub instances
+    """
+
     def __init__(self, name):
+        """Constructor for module instance
+        """
+
         super().__init__(name[:-3])
         self.instance_list = []
 
+
     def add_sub_instance(self, instance: ItemInstance) -> None:
+        """Adds a sub-instance (methods)
+
+        instance : ItemInstance
+            item instance to add as sub-instance
+        """
+
         self.instance_list.append(instance)
 
+
     def convert_to_markdown(self, heading_level: int) -> str:
+        """Override of base class, returns its own markdown plus sub instances
+
+        Parameters
+        ----------
+        heading_level : int
+            The heading emphasis for the instance
+        
+        Returns
+        -------
+        md : str
+            Markdown string
+        """
+
         md = f'{super().convert_to_markdown(heading_level)}\n\n'
         for instance in self.instance_list:
             if isinstance(instance, FunctionInstance):
@@ -124,11 +358,21 @@ class ModuleInstance(ItemInstance):
         return md
 
 
-StringList = List[str]
+# Some more definitions of types
 InstanceList = List[ItemInstance]
 
 
 def add_docstring_to_instance(instance: ItemInstance, doc_string: StringList) -> None:
+    """Function that parses docstring to data structures and adds to instance
+
+    Parameters
+    ----------
+    instance : ItemInstance
+        current instance
+    doc_string : list of str
+        Current instance's docstring as list of lines
+    """
+
     current_descriptor = None
     i = 0
     while i < len(doc_string):
@@ -156,6 +400,23 @@ def add_docstring_to_instance(instance: ItemInstance, doc_string: StringList) ->
 
 
 def grab_module_instance(file_contents: StringList, file_name: str, parent_package=None) -> InstanceList:
+    """Function that generates complete instance object for module
+
+    Parameters
+    ----------
+    file_contents : list of str
+        Lines in python module file
+    file_name : str
+        Name of the file or module
+    parent_package=None : str
+        name of the parent package (if applicable)
+
+    Returns
+    -------
+    top_module_instance : ModuleInstance
+        module instance object at top level
+    """
+
 
     if file_name == '__init__.py' and parent_package is not None:
         module_name = parent_package + '.py'
@@ -197,8 +458,35 @@ def grab_module_instance(file_contents: StringList, file_name: str, parent_packa
 
 
 class ConversionItem:
+    """Class representing single file to convert
+
+    Attributes
+    ----------
+    parent_package : str
+        Parent package for file (if applicable)
+    file_path : os.PathLike
+        Source file path
+    file_name : str
+        Source file name
+    md_file_name : str
+        Output markdown file name
+    converted_markdown : str
+        Markdown for the module
+    module_instance : ModuleInstance
+        Converted module instance
+
+    Methods
+    -------
+    collect_docstrings()
+        Collects docstrings from file
+    generate_markdown()
+        Generates markdown for file
+    """
 
     def __init__(self, file_path: os.PathLike, parent_package: str=None):
+        """Constructor for conversion item class
+        """
+
         self.parent_package = parent_package
         self.file_path = file_path
         self.file_name = os.path.basename(self.file_path)
@@ -217,6 +505,9 @@ class ConversionItem:
 
 
     def collect_docstrings(self) -> None:
+        """Collects docstrings from file
+        """
+
         item_fp = open(self.file_path, 'r')
         file_contents = item_fp.readlines()
         self.module_instance = grab_module_instance(file_contents, os.path.basename(self.file_path), parent_package=self.parent_package)
@@ -224,26 +515,61 @@ class ConversionItem:
 
 
     def generate_markdown(self) -> None:
+        """Generates markdown for file
+        """
+
         self.converted_markdown = self.module_instance.convert_to_markdown(1)
 
 
+# Define for type checking
 ConversionList = List[ConversionItem]
 
 
-
 class MDConverter:
+    """Main Driver class for script
+
+    Attributes
+    ----------
+    conversion_item_list : ConversionList
+        list of items to convert
+    output_loc : os.PathLike
+        Output location for markdown
+
+    Methods
+    -------
+    convert_doc_to_md()
+        Converts all docstrings to markdown
+    generate_markdown_for_item()
+        Writes generated markdown to file
+    execute_conversion_process()
+        Main driver function
+    """
 
     def __init__(self, conversion_item_list: ConversionList, output_loc: os.PathLike):
+        """Constructor for MDConverter
+        """
+
         self.conversion_item_list = conversion_item_list
         self.output_loc = output_loc
-        
 
 
     def convert_doc_to_md(self, conversion_item: ConversionItem) -> None:
+        """Converts docstrings to markdown internally
+        """
+
         conversion_item.collect_docstrings()
         conversion_item.generate_markdown()
 
+
     def generate_markdown_for_item(self, conversion_item: ConversionItem) -> None:
+        """Generates a markdown file for given conversion item
+
+        Parameters
+        ----------
+        conversion_item : ConversionItem
+            Conversion item for which to create markdown file
+        """
+
         md_fp = open(os.path.join(self.output_loc, conversion_item.md_file_name), 'w')
         print(f'Writing converted markdown file {conversion_item.md_file_name} from {os.path.basename(conversion_item.file_path)}')
         md_fp.write(conversion_item.converted_markdown)
@@ -251,6 +577,9 @@ class MDConverter:
 
 
     def execute_conversion_process(self) -> None:
+        """Main Driver function for converter
+        """
+
         for conversion_item in self.conversion_item_list:
             self.convert_doc_to_md(conversion_item)
             #print(f'{conversion_item.module_instance}')
@@ -260,6 +589,20 @@ class MDConverter:
 
 
 def generate_conversion_item_list(target: os.PathLike, ignore_list: StringList) -> ConversionList:
+    """Generates list of all conversion items
+
+    Parameters
+    ----------
+    target : os.PathLike
+        target of python module or package
+    ignore_list : list of str
+        List of filenames to ignore
+    
+    Returns
+    -------
+    conversion_item_list : ConversionList
+        List of all discovered files as conversion items
+    """
     conversion_item_list = []
 
     if os.path.isfile(target):
@@ -273,14 +616,43 @@ def generate_conversion_item_list(target: os.PathLike, ignore_list: StringList) 
     return conversion_item_list
 
 
-
 def err_exit(message: str, code: int) -> None:
+    """Exits program with error
+
+    Parameters
+    ----------
+    message : str
+        error message
+    code : int
+        exit code
+    """
+
     print(f'ERROR - {message}')
     exit(code)
 
 
 
 def check_input_output_valid(target: os.PathLike, output: os.PathLike, ignore_list: StringList) -> (bool, int, str):
+    """Checks if given input was valid
+
+    Parameters
+    ----------
+    target : os.PathLike
+        target input location
+    output : os.PathLike
+        Markdown output location
+    ignore_list : list of str
+        list of filenames to ignore
+
+    Returns
+    -------
+    valid : bool
+        True if valid, false otherwise
+    err_code : int
+        Error code if applicable
+    err_message : str
+        Error message if applicable
+    """
 
     valid = False
     err_code = -1
@@ -313,9 +685,16 @@ def check_input_output_valid(target: os.PathLike, output: os.PathLike, ignore_li
     return valid, err_code, err_message
 
 
-
-
 def parse_args() -> (MDConverter, bool):
+    """Function that parses user arguments
+
+    Returns
+    -------
+    converter : MDConverter
+        Main converter object
+    debug : bool
+        toggle for debug printing
+    """
 
     parser = argparse.ArgumentParser()
     parser.add_argument('target', help='The path to the target python project or file to convert.')
@@ -339,8 +718,6 @@ def parse_args() -> (MDConverter, bool):
     
     converter = MDConverter(conversion_list, args['output'])
     return converter, args['debug']
-
-
 
 
 if __name__ == "__main__":
