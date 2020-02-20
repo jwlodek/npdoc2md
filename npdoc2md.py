@@ -10,14 +10,15 @@ import logging
 from typing import List
 
 
-
 __version__ = '0.0.1'
 
 docstring_descriptors = {
-    'Attributes' : ['Attributes', 'Type', 'Doc'],
-    'Methods' : ['Method', 'Doc'],
-    'Returns' : ['Returns', 'Type', 'Doc'],
-    'Parameters' : ['Parameters', 'Type', 'Doc'],
+    'Classes'       : ['Class',             'Doc'],
+    'Functions'     : ['Function',          'Doc'],
+    'Attributes'    : ['Attribute',         'Type', 'Doc'],
+    'Methods'       : ['Method',            'Doc'],
+    'Returns'       : ['Return Variable',   'Type', 'Doc'],
+    'Parameters'    : ['Parameter',         'Type', 'Doc'],
 }
 
 
@@ -92,7 +93,7 @@ class FunctionInstance(ItemInstance):
 class ClassInstance(ItemInstance):
     
     def __init__(self, name, usage):
-        super().__init__(name, usage=usage)
+        super().__init__(name[:-1], usage=usage)
         self.instance_list = []
 
     def add_sub_instance(self, instance: ItemInstance) -> None:
@@ -101,13 +102,13 @@ class ClassInstance(ItemInstance):
     def convert_to_markdown(self, heading_level: int) -> str:
         md = f'{super().convert_to_markdown(heading_level)}\n\n'
         for function_instance in self.instance_list:
-            md = f'{function_instance.convert_to_markdown(3)}\n\n\n'
+            md = f'{md}{function_instance.convert_to_markdown(3)}\n\n\n'
         return md
 
 
 class ModuleInstance(ItemInstance):
     def __init__(self, name):
-        super().__init__(name)
+        super().__init__(name[:-3])
         self.instance_list = []
 
     def add_sub_instance(self, instance: ItemInstance) -> None:
@@ -116,10 +117,11 @@ class ModuleInstance(ItemInstance):
     def convert_to_markdown(self, heading_level: int) -> str:
         md = f'{super().convert_to_markdown(heading_level)}\n\n'
         for instance in self.instance_list:
+            #print(instance.convert_to_markdown(3))
             if isinstance(instance, FunctionInstance):
-                md = f'{instance.convert_to_markdown(3)}\n\n\n'
+                md = f'{md}{instance.convert_to_markdown(3)}\n\n\n'
             elif isinstance(instance, ClassInstance):
-                md = f'{instance.convert_to_markdown(1)}\n\n\n'
+                md = f'{md}{instance.convert_to_markdown(2)}\n\n\n'
         return md
 
 
@@ -128,15 +130,16 @@ InstanceList = List[ItemInstance]
 
 
 def add_docstring_to_instance(instance: ItemInstance, doc_string: StringList) -> None:
+    print(doc_string)
     current_descriptor = None
     i = 0
     while i < len(doc_string):
+        left_stripped = doc_string[i].lstrip()
         stripped = doc_string[i].strip()
         if i == 0:
             instance.set_simple_description(stripped[3:])
         elif stripped not in docstring_descriptors.keys() and current_descriptor is None:
-            if len(stripped) > 0:
-                instance.add_to_detailed_description(stripped)
+            instance.add_to_detailed_description(left_stripped)
         elif stripped in docstring_descriptors.keys():
             current_descriptor = stripped
         elif current_descriptor is not None and not stripped.startswith('---') and len(stripped) > 0:
@@ -167,7 +170,7 @@ def grab_module_instance(file_contents: StringList, file_name: str) -> InstanceL
         if line.strip().startswith('def'):
             if line.startswith('def'):
                 parent_instance = top_module_instance
-            current_instance = FunctionInstance(line.split('(')[0].split(' ')[1], line.strip()[:-1])
+            current_instance = FunctionInstance(line.strip().split('(')[0].split(' ')[1], line.strip()[:-1])
             parent_instance.add_sub_instance(current_instance)
         
         elif line.startswith('class'):
@@ -176,10 +179,10 @@ def grab_module_instance(file_contents: StringList, file_name: str) -> InstanceL
             parent_instance = current_instance
 
         if line.strip().startswith('"""'):
-            doc_string = line + '\n'
+            doc_string = line
             line_counter = line_counter + 1
             while not file_contents[line_counter].strip().endswith('"""'):
-                doc_string = doc_string + file_contents[line_counter] + '\n'
+                doc_string = doc_string + file_contents[line_counter]
                 line_counter = line_counter + 1
             if current_instance is not None:
                 add_docstring_to_instance(current_instance, doc_string.splitlines())
@@ -247,7 +250,10 @@ class MDConverter:
     def execute_conversion_process(self) -> None:
         for conversion_item in self.conversion_item_list:
             self.convert_doc_to_md(conversion_item)
+            #print(f'{conversion_item.module_instance}')
             self.generate_markdown_for_item(conversion_item)
+
+
 
 
 def generate_conversion_item_list(target: os.PathLike, ignore_list: StringList) -> ConversionList:
@@ -280,7 +286,7 @@ def check_input_output_valid(target: os.PathLike, output: os.PathLike, ignore_li
     if not os.path.exists(target):
         err_message = 'The target path does not exist!'
     
-    elif os.path.isfile(target) and os.path.basename(target) in ignore_list:
+    elif os.path.isfile(target) and ignore_list is not None and os.path.basename(target) in ignore_list:
         err_message = 'The target path is a file that is being ignored!'
 
     elif os.path.exists(output) and not os.path.isdir(output):
