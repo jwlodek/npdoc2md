@@ -1,3 +1,3 @@
 @echo OFF
 
-py npdoc2md.py . example -i setup.py
+py npdoc2md.py -i . -o example -s setup.py

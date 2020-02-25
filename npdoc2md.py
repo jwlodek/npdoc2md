@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
-"""Script for autogenerating markdown documentation given path to python package with numpy-style comments
-
+"""Script for autogenerating markdown documentation given path to python package with numpy-style comments  
 
 @author: Jakub Wlodek  
 @created: Feb-6-2020
 """
 
-
 # Some standard lib imports
 import os
+import sys
 import shutil
 import argparse
 import logging
@@ -19,7 +18,10 @@ from typing import List
 StringList = List[str]
 
 # Current script version
-__version__ = '0.0.1'
+__version__     = '0.0.1'
+__copyright__   = '2020'
+__author__      = 'Jakub Wlodek'
+__url__         = 'https://github.com/jwlodek/npdoc2md'
 
 
 # Descriptors possible in docstrings, used for tables
@@ -44,7 +46,7 @@ class DocStringAttribute:
         List of elements assigned to the attribute for the current instance
     """
 
-    def __init__(self, attribute_name):
+    def __init__(self, attribute_name : str):
         self.attribute_name = attribute_name
         self.attribute_elements = []
 
@@ -638,6 +640,18 @@ def check_input_output_valid(target: os.PathLike, output: os.PathLike, ignore_li
     return valid, err_code, err_message
 
 
+def print_version_info() -> None:
+    """Function that prints version, copyright, and author information
+    """
+
+    print(f'npdoc2md v{__version__}\n')
+    print(f'Copyright (c) {__copyright__}')
+    print(f'Author: {__author__}')
+    print(f'{__url__}')
+    print('MIT License\n')
+
+
+
 def parse_args() -> (MDConverter, bool):
     """Function that parses user arguments
 
@@ -650,22 +664,27 @@ def parse_args() -> (MDConverter, bool):
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('target', help='The path to the target python project or file to convert.')
-    parser.add_argument('output', help='The output directory where the markdown files should be placed.')
-    parser.add_argument('-i', '--ignore', nargs='+', help='List of filenames/directories to ignore.')
+    parser.add_argument('-v', '--version', action='store_true', help='Use this flag to print out npdoc2md version info.')
+    parser.add_argument('-i', '--input', required= not ('-v' in sys.argv or '--version' in sys.argv), help='The path to the target python project or file to convert.')
+    parser.add_argument('-o', '--output', required= not ('-v' in sys.argv or '--version' in sys.argv), help='The output directory where the markdown files should be placed.')
+    parser.add_argument('-s', '--skip', nargs='+', help='List of filenames/directories to skip.')
     parser.add_argument('-d', '--debug', action='store_true', help='Add this flag to print detailed log messages during conversion.')
     args = vars(parser.parse_args())
 
-    valid, err_code, err_message = check_input_output_valid(args['target'], args['output'], args['ignore'])
+    if args['version']:
+        print_version_info()
+        exit()
+
+    valid, err_code, err_message = check_input_output_valid(args['input'], args['output'], args['skip'])
     if not valid:
         err_exit(err_message, err_code)
 
-    if args['ignore'] is None:
+    if args['skip'] is None:
         ignore_list = []
     else:
-        ignore_list = args['ignore']
+        ignore_list = args['skip']
 
-    conversion_list = generate_conversion_item_list(args['target'], ignore_list)
+    conversion_list = generate_conversion_item_list(args['input'], ignore_list)
     if len(conversion_list) == 0:
         err_exit('No valid files detected for conversion.', -1)
     
