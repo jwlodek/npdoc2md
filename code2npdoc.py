@@ -41,32 +41,58 @@ docstring_descriptors = {
 
 class DocStringAttribute:
 
-    def __init__(self, attribute_name : str):
+    def __init__(self, attribute_name : str, elements):
         self.attribute_name = attribute_name
-        self.attribute_elements = []
+        self.attribute_elements = elements
 
 class GenerationInstance:
 
-    def __init__(self, name):
+    def __init__(self, name, doc_level):
         self.name = name
         self.descriptors = []
+        self.doc_level = doc_level
 
-class ClassGenerationInstance(GenerationInstance):
 
-    def __init__(self, name):
-        super().__init__(name)
+    def add_descriptor(self, name, elements):
+        self.descriptors.append(DocStringAttribute(name, elements))
 
-class FunctionGenerationInstance(GenerationInstance):
+    def make_descriptor_string(self):
+        desc_string = ''
+        tabs = '    ' * self.doc_level
+        for descriptor in self.descriptors:
+            desc_string = f'{desc_string}{tabs}{descriptor.attribute_name}\n{"-" * len(descriptor.attribute_name)}\n'
+            for elem in descriptor.attribute_element:
+                desc_string = f'{desc_string}{tabs}{elem}\n{tabs}    TODO describe {elem}\n'
+            desc_string = f'{desc_string}\n'
+        return desc_string
 
-    def __init__(self, name):
-        super().__init__(name)
 
-class ModuleGenerationInstance(GenerationInstance):
+class ModuleGenerationInstance:
 
     def __init__(self, name, original_module_text):
-        super().__init__(name)
         self.original_module_text = original_module_text
+        self.sub_gen_items = []
 
+    def get_generated(self):
+        out = ''
+        line_counter = 0
+        while line_counter < len(original_module_text):
+            line = original_module_text[line_counter]
+            match = self.return_match(line)
+            if match is None or original_module_text[line_counter + 1].strip().startswith('"""'):
+                out = f'{out}{line}'
+            else:
+                out = f'{out}{line}{match[0]}"""TODO - describe {match[1]}\n{match[2]}\n"""'
+
+        return out
+
+
+    def return_match(self, line):
+        match = None
+        for item in self.sub_gen_items:
+            if line.strip.startswith(item.name) or line.strip.startswith(f'def {item.name}'):
+                match = [item.name, item.doc_level, item.make_descriptor_string()]
+        return match
 
 
 class GenerationItem:
@@ -79,7 +105,19 @@ class GenerationItem:
 
 
     def create_module_gen_instance(self) -> ModuleGenerationInstance:
-        pass
+        target_fp = open(self.target, 'r')
+        contents = target_fp.readlines()
+        mod_instance = ModuleGenerationInstance(os.path.basename(self.target), contents)
+        for line in contents:
+            stripped = line.strip()
+            if line.startswith('class'):
+                mod_instance.sub_gen_items.append(GenerationInstance(stripped.split(' ')[1][:-1], 1))
+            elif line.startswith('def'):
+                mod_instance.sub_gen_items.append(GenerationInstance(stripped.split(' ')[1].split('(')[0], 1))
+            elif stripped.startswith('def'):
+                mod_instance.sub_gen_items.append(GenerationInstance(stripped.split(' ')[1].split('(')[0], 2))
+
+        return mod_instance
 
 
     def generate_np_docs(self) -> None:
@@ -95,6 +133,42 @@ class GenerationItem:
 
 
 class DocGenerator:
+
+    def __init__(self):
+        pass
+
+    def generate_docs(self):
+        for item in self.generate_generation_item_list():
+            item.generate_np_docs()
+
+
+
+def generate_generation_item_list(target: os.PathLike, ignore_list: StringList, overwrite : bool) -> ConversionList:
+    """Generates list of all conversion items
+
+    Parameters
+    ----------
+    target : os.PathLike
+        target of python module or package
+    ignore_list : list of str
+        List of filenames to ignore
+    
+    Returns
+    -------
+    conversion_item_list : ConversionList
+        List of all discovered files as conversion items
+    """
+    generation_item_list = []
+
+    if os.path.isfile(target):
+        generation_item_list.append(GenerationItem(os.path.abspath(target)))
+    else:
+        for (root, _, files) in os.walk(target):
+            for file in files:
+                if file not in ignore_list and file.endswith('.py'):
+                    generation_item_list.append(GenerationItem(os.path.abspath(os.path.join(root, file)), overwrite))
+
+    return generation_item_list
 
 
 def err_exit(message: str, code: int) -> None:
