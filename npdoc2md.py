@@ -5,39 +5,6 @@
 
 @author: Jakub Wlodek  
 @created: Feb-6-2020
-
-Classes
--------
-DocStringAttribute
-    Stores docstring attribute and its elements. Ex(Parameters)
-ItemInstance
-    Base class for encountered programmatic instances
-FunctionInstance(ItemInstance)
-    Represents an encountered function or method
-ClassInstance(ItemInstance)
-    Represents an encountered class
-ModuleInstance(ItemInstance)
-    Represents an encountered module
-ConversionItem
-    Single file that needs to be converted. Corresponds to one ModuleInstance object
-MDConverter
-    Main conversion driver class
-
-
-Functions
----------
-add_docstring_to_instance()
-    Function that parses a docstring into data structures and adds it to instance object
-grab_module_instance()
-    Function that takes a module, and generates all instance objects in a top level module instance
-generate_conversion_item_list()
-    Generates conversion item objects given target
-err_exit()
-    Exits program with an error
-check_input_output_valid()
-    Checks if given inputs are valid
-parse_args()
-    Parses user arguments
 """
 
 
@@ -97,23 +64,6 @@ class ItemInstance:
         Additional detailed description
     descriptiors : dict of str -> DocStringAttribute
         Map of all docstring attribute descriptors
-
-    Methods
-    -------
-    set_simple_description()
-        Initializes the simple description
-    add_to_detailed_description()
-        Appends to the detailed description
-    add_descriptor()
-        Adds a new descriptor
-    generate_md_table_from_descriptor()
-        Generates markdown table given descriptor
-    get_usage_str()
-        Generates usage markdown
-    convert_to_markdown()
-        Converts current instance state to markdown
-    __format__()
-        Override of base format class
     """
     
     def __init__(self, name: str, usage: str = None):
@@ -259,13 +209,6 @@ class FunctionInstance(ItemInstance):
 
 class ClassInstance(ItemInstance):
     """Class representing class instances
-
-    Methods
-    -------
-    add_sub_instance()
-        Adds a sub-instance (methods)
-    convert_to_markdown()
-        Override of base class, returns its own markdown plus sub instances
     """
     
     def __init__(self, name, usage):
@@ -286,6 +229,19 @@ class ClassInstance(ItemInstance):
         self.instance_list.append(instance)
 
 
+    def generate_method_descriptor(self):
+        """Function that auto-generates the method descriptor from methods in class
+        """
+
+        method_descriptor_elems = []
+        for item in self.instance_list:
+            if isinstance(item, FunctionInstance) and item.name != '__init__':
+                method_descriptor_elems.append([item.name, item.simple_description])
+        
+        if len(method_descriptor_elems) > 0:
+            self.add_descriptor('Methods',      method_descriptor_elems)
+
+
     def convert_to_markdown(self, heading_level: int) -> str:
         """Override of base class, returns its own markdown plus sub instances
 
@@ -300,6 +256,7 @@ class ClassInstance(ItemInstance):
             Markdown string
         """
 
+        self.generate_method_descriptor()
         md = f'{super().convert_to_markdown(heading_level)}\n\n'
         for function_instance in self.instance_list:
             md = f'{md}{function_instance.convert_to_markdown(3)}\n\n\n'
@@ -308,13 +265,6 @@ class ClassInstance(ItemInstance):
 
 class ModuleInstance(ItemInstance):
     """Top Level module instance class
-
-    Methods
-    -------
-    add_sub_instance()
-        Adds a sub-instance (methods)
-    convert_to_markdown()
-        Override of base class, returns its own markdown plus sub instances
     """
 
     def __init__(self, name):
@@ -335,6 +285,24 @@ class ModuleInstance(ItemInstance):
         self.instance_list.append(instance)
 
 
+    def generate_class_function_descriptors(self):
+        """Function that generates descriptors for included classes and functions in the module
+        """
+
+        class_descriptor_elems = []
+        func_descriptor_elems = []
+        for item in self.instance_list:
+            if isinstance(item, ClassInstance):
+                class_descriptor_elems.append([item.name, item.simple_description])
+            elif isinstance(item, FunctionInstance):
+                func_descriptor_elems.append([item.name, item.simple_description])
+        
+        if len(class_descriptor_elems) > 0:
+            self.add_descriptor('Classes',      class_descriptor_elems)
+        if len(func_descriptor_elems) > 0:
+            self.add_descriptor('Functions',    func_descriptor_elems)
+
+
     def convert_to_markdown(self, heading_level: int) -> str:
         """Override of base class, returns its own markdown plus sub instances
 
@@ -349,6 +317,7 @@ class ModuleInstance(ItemInstance):
             Markdown string
         """
 
+        self.generate_class_function_descriptors()
         md = f'{super().convert_to_markdown(heading_level)}\n\n'
         for instance in self.instance_list:
             if isinstance(instance, FunctionInstance):
@@ -474,13 +443,6 @@ class ConversionItem:
         Markdown for the module
     module_instance : ModuleInstance
         Converted module instance
-
-    Methods
-    -------
-    collect_docstrings()
-        Collects docstrings from file
-    generate_markdown()
-        Generates markdown for file
     """
 
     def __init__(self, file_path: os.PathLike, parent_package: str=None):
@@ -534,15 +496,6 @@ class MDConverter:
         list of items to convert
     output_loc : os.PathLike
         Output location for markdown
-
-    Methods
-    -------
-    convert_doc_to_md()
-        Converts all docstrings to markdown
-    generate_markdown_for_item()
-        Writes generated markdown to file
-    execute_conversion_process()
-        Main driver function
     """
 
     def __init__(self, conversion_item_list: ConversionList, output_loc: os.PathLike):
