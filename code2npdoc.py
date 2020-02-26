@@ -29,32 +29,21 @@ __author__      = 'Jakub Wlodek'
 __url__         = 'https://github.com/jwlodek/npdoc2md'
 
 
-# Descriptors possible in docstrings, used for tables
-docstring_descriptors = {
-    'Classes'       : ['Class',             'Doc'],
-    'Functions'     : ['Function',          'Doc'],
-    'Attributes'    : ['Attribute',         'Type', 'Doc'],
-    'Methods'       : ['Method',            'Doc'],
-    'Returns'       : ['Return Variable',   'Type', 'Doc'],
-    'Parameters'    : ['Parameter',         'Type', 'Doc'],
-}
-
-
 class DocStringAttribute:
 
-    def __init__(self, attribute_name : str, elements):
+    def __init__(self, attribute_name : str, elements : List[str]):
         self.attribute_name = attribute_name
         self.attribute_elements = elements
 
 class GenerationInstance:
 
-    def __init__(self, name, doc_level):
+    def __init__(self, name : str, doc_level : int):
         self.name = name
         self.descriptors = []
         self.doc_level = doc_level
 
 
-    def add_descriptor(self, name, elements):
+    def add_descriptor(self, name : str, elements : List[str]):
         self.descriptors.append(DocStringAttribute(name, elements))
 
     def make_descriptor_string(self):
@@ -64,7 +53,7 @@ class GenerationInstance:
         for descriptor in self.descriptors:
             desc_string = f'{desc_string}{tabs}{descriptor.attribute_name}\n{tabs}{"-" * len(descriptor.attribute_name)}\n'
             for elem in descriptor.attribute_elements:
-                desc_string = f'{desc_string}{tabs}{elem.strip()}\n{tabs}    TODO describe {elem.strip()}\n'
+                desc_string = f'{desc_string}{tabs}{elem.strip()}\n{tabs}    TODO\n'
             
             descriptor_counter += 1
             if descriptor_counter < len(self.descriptors):
@@ -75,7 +64,7 @@ class GenerationInstance:
 
 class ModuleGenerationInstance:
 
-    def __init__(self, name, original_module_text):
+    def __init__(self, name : str, original_module_text : List[str]):
         self.original_module_text = original_module_text
         self.sub_gen_items = []
 
@@ -90,7 +79,7 @@ class ModuleGenerationInstance:
             elif line_counter < len(self.original_module_text) - 1 and self.original_module_text[line_counter + 1].strip().startswith('"""'):
                     out = f'{out}{line}'
             else:
-                out = f'{out}{line}{"    " * match[1]}"""TODO - describe {match[0]}\n\n{match[2]}{"    " * match[1]}"""\n\n'
+                out = f'{out}{line}{"    " * match[1]}"""TODO\n\n{match[2]}{"    " * match[1]}"""\n\n'
 
 
             line_counter = line_counter + 1
@@ -98,7 +87,7 @@ class ModuleGenerationInstance:
         return out
 
 
-    def return_match(self, line):
+    def return_match(self, line : str):
         match = None
         for item in self.sub_gen_items:
             if len(line.strip().split(' ', 1)) > 1:
@@ -113,7 +102,7 @@ class ModuleGenerationInstance:
 
 class GenerationItem:
 
-    def __init__(self, target_file_path : os.PathLike, overwrite):
+    def __init__(self, target_file_path : os.PathLike, overwrite : bool):
         self.target = target_file_path
         self.overwrite = overwrite
         self.temp_file = os.path.join(os.path.dirname(self.target), '__code2npdoc_temp__')
@@ -139,11 +128,16 @@ class GenerationItem:
                     class_instance = None
                     class_attributes = []
                 current_instance = GenerationInstance(stripped.split(' ')[1].split('(')[0], 1)
-                current_instance.add_descriptor('Parameters', line.split('(', 1)[1].split(')', 1)[0].split(','))
+                params = line.split('(', 1)[1].split(')', 1)[0].split(',')
+                if len(params) > 0 and len(params[0].strip()) > 0:
+                    current_instance.add_descriptor('Parameters', params)
                 mod_instance.sub_gen_items.append(current_instance)
             elif stripped.startswith('def'):
                 current_instance = GenerationInstance(stripped.split(' ')[1].split('(')[0], 2)
-                current_instance.add_descriptor('Parameters', line.split('(', 1)[1].split(')', 1)[0].split(','))
+                params = line.split('(', 1)[1].split(')', 1)[0].split(',')
+                print(params)
+                if len(params) > 1:
+                    current_instance.add_descriptor('Parameters', params[1:])
                 mod_instance.sub_gen_items.append(current_instance)
             elif stripped.startswith('return'):
                 current_instance.add_descriptor('Returns', stripped.split(' ', 1)[1].split(','))
@@ -172,7 +166,7 @@ class GenerationItem:
 
 class DocGenerator:
 
-    def __init__(self, target, ignore_list):
+    def __init__(self, target : os.PathLike, ignore_list : List[str]):
         self.target = target
         self.ignore_list = ignore_list
 
@@ -182,7 +176,7 @@ class DocGenerator:
 
 
 
-def generate_generation_item_list(target: os.PathLike, ignore_list: StringList, overwrite : bool):
+def generate_generation_item_list(target: os.PathLike, ignore_list: List[str], overwrite : bool) -> List[GenerationItem]:
     generation_item_list = []
 
     if os.path.isfile(target):
@@ -202,7 +196,7 @@ def err_exit(message: str, code: int) -> None:
     exit(code)
 
 
-def check_input_output_valid(target: os.PathLike, ignore_list: StringList) -> (bool, int, str):
+def check_input_output_valid(target: os.PathLike, ignore_list: List[str]) -> (bool, int, str):
 
     valid = False
     err_code = -1
