@@ -141,7 +141,7 @@ class GenerationItem:
                 mod_instance.sub_gen_items.append(current_instance)
             elif stripped.startswith('return'):
                 current_instance.add_descriptor('Returns', stripped.split(' ', 1)[1].split(','))
-            elif stripped.startswith('self') and class_instance is not None:
+            elif stripped.startswith('self') and class_instance is not None and current_instance.name=='__init__':
                 attr = stripped.split('=')[0].split('.',1)[1]
                 if attr not in class_attributes:
                     class_attributes.append(attr)
