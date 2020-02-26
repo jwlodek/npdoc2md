@@ -358,11 +358,17 @@ def add_docstring_to_instance(instance: ItemInstance, doc_string: StringList) ->
         elif current_descriptor is not None and not stripped.startswith('---') and len(stripped) > 0:
             descriptor_elem = []
             if len(docstring_descriptors[current_descriptor]) == 3:
-                descriptor_elem = descriptor_elem + stripped.split(':')
+                name_type = stripped.split(':')
+                if len(name_type) == 1:
+                    name_type.append('Unknown')
+                descriptor_elem = descriptor_elem + name_type
             else:
                 descriptor_elem.append(stripped.split('(')[0])
             i = i + 1
-            descriptor_elem.append(doc_string[i].strip())
+            try:
+                descriptor_elem.append(doc_string[i].strip())
+            except IndexError:
+                descriptor_elem.append('Unknown')
             if current_descriptor not in instance.descriptors.keys():
                 instance.descriptors[current_descriptor] = [descriptor_elem]
             else:
