@@ -16,6 +16,7 @@ import sys
 import shutil
 import argparse
 import logging
+import time
 
 # Import typing to use python3 typing features
 from typing import List
@@ -59,11 +60,16 @@ class GenerationInstance:
     def make_descriptor_string(self):
         desc_string = ''
         tabs = '    ' * self.doc_level
+        descriptor_counter = 0
         for descriptor in self.descriptors:
-            desc_string = f'{desc_string}{tabs}{descriptor.attribute_name}\n{"-" * len(descriptor.attribute_name)}\n'
-            for elem in descriptor.attribute_element:
-                desc_string = f'{desc_string}{tabs}{elem}\n{tabs}    TODO describe {elem}\n'
-            desc_string = f'{desc_string}\n'
+            desc_string = f'{desc_string}{tabs}{descriptor.attribute_name}\n{tabs}{"-" * len(descriptor.attribute_name)}\n'
+            for elem in descriptor.attribute_elements:
+                desc_string = f'{desc_string}{tabs}{elem.strip()}\n{tabs}    TODO describe {elem.strip()}\n'
+            
+            descriptor_counter += 1
+            if descriptor_counter < len(self.descriptors):
+                desc_string = f'{desc_string}\n'
+
         return desc_string
 
 
@@ -76,13 +82,18 @@ class ModuleGenerationInstance:
     def get_generated(self):
         out = ''
         line_counter = 0
-        while line_counter < len(original_module_text):
-            line = original_module_text[line_counter]
+        while line_counter < len(self.original_module_text):
+            line = self.original_module_text[line_counter]
             match = self.return_match(line)
-            if match is None or original_module_text[line_counter + 1].strip().startswith('"""'):
+            if match is None:
                 out = f'{out}{line}'
+            elif line_counter < len(self.original_module_text) - 1 and self.original_module_text[line_counter + 1].strip().startswith('"""'):
+                    out = f'{out}{line}'
             else:
-                out = f'{out}{line}{match[0]}"""TODO - describe {match[1]}\n{match[2]}\n"""'
+                out = f'{out}{line}{"    " * match[1]}"""TODO - describe {match[0]}\n\n{match[2]}{"    " * match[1]}"""\n\n'
+
+
+            line_counter = line_counter + 1
 
         return out
 
@@ -90,8 +101,13 @@ class ModuleGenerationInstance:
     def return_match(self, line):
         match = None
         for item in self.sub_gen_items:
-            if line.strip.startswith(item.name) or line.strip.startswith(f'def {item.name}'):
-                match = [item.name, item.doc_level, item.make_descriptor_string()]
+            if len(line.strip().split(' ', 1)) > 1:
+                if line.strip().split(' ', 1)[1].startswith(item.name):
+                    print('Matched!')
+                    if item.name == '__init__':
+                        match = [item.name, item.doc_level, '']
+                    else:
+                        match = [item.name, item.doc_level, item.make_descriptor_string()]
         return match
 
 
@@ -100,7 +116,7 @@ class GenerationItem:
     def __init__(self, target_file_path : os.PathLike, overwrite):
         self.target = target_file_path
         self.overwrite = overwrite
-        self.temp_file = os.path.join(os.dirname(self.target), '__code2npdoc_temp__')
+        self.temp_file = os.path.join(os.path.dirname(self.target), '__code2npdoc_temp__')
         self.module_gen_instance = self.create_module_gen_instance()
 
 
@@ -108,14 +124,36 @@ class GenerationItem:
         target_fp = open(self.target, 'r')
         contents = target_fp.readlines()
         mod_instance = ModuleGenerationInstance(os.path.basename(self.target), contents)
+        class_instance = None
+        class_attributes = []
+        current_instance = None
         for line in contents:
             stripped = line.strip()
             if line.startswith('class'):
-                mod_instance.sub_gen_items.append(GenerationInstance(stripped.split(' ')[1][:-1], 1))
+                current_instance = GenerationInstance(stripped.split(' ')[1][:-1], 1)
+                class_instance = current_instance
+                mod_instance.sub_gen_items.append(current_instance)
             elif line.startswith('def'):
-                mod_instance.sub_gen_items.append(GenerationInstance(stripped.split(' ')[1].split('(')[0], 1))
+                if class_instance is not None:
+                    class_instance.add_descriptor('Attributes', class_attributes)
+                    class_instance = None
+                    class_attributes = []
+                current_instance = GenerationInstance(stripped.split(' ')[1].split('(')[0], 1)
+                current_instance.add_descriptor('Parameters', line.split('(', 1)[1].split(')', 1)[0].split(','))
+                mod_instance.sub_gen_items.append(current_instance)
             elif stripped.startswith('def'):
-                mod_instance.sub_gen_items.append(GenerationInstance(stripped.split(' ')[1].split('(')[0], 2))
+                current_instance = GenerationInstance(stripped.split(' ')[1].split('(')[0], 2)
+                current_instance.add_descriptor('Parameters', line.split('(', 1)[1].split(')', 1)[0].split(','))
+                mod_instance.sub_gen_items.append(current_instance)
+            elif stripped.startswith('return'):
+                current_instance.add_descriptor('Returns', stripped.split(' ', 1)[1].split(','))
+            elif stripped.startswith('self') and class_instance is not None:
+                attr = stripped.split('=')[0].split('.',1)[1]
+                if attr not in class_attributes:
+                    class_attributes.append(attr)
+
+        if class_instance is not None:
+            class_instance.add_descriptor('Attributes', class_attributes)
 
         return mod_instance
 
@@ -134,34 +172,21 @@ class GenerationItem:
 
 class DocGenerator:
 
-    def __init__(self):
-        pass
+    def __init__(self, target, ignore_list):
+        self.target = target
+        self.ignore_list = ignore_list
 
-    def generate_docs(self):
-        for item in self.generate_generation_item_list():
+    def generate_docs(self, overwrite):
+        for item in generate_generation_item_list(self.target, self.ignore_list, overwrite):
             item.generate_np_docs()
 
 
 
-def generate_generation_item_list(target: os.PathLike, ignore_list: StringList, overwrite : bool) -> ConversionList:
-    """Generates list of all conversion items
-
-    Parameters
-    ----------
-    target : os.PathLike
-        target of python module or package
-    ignore_list : list of str
-        List of filenames to ignore
-    
-    Returns
-    -------
-    conversion_item_list : ConversionList
-        List of all discovered files as conversion items
-    """
+def generate_generation_item_list(target: os.PathLike, ignore_list: StringList, overwrite : bool):
     generation_item_list = []
 
     if os.path.isfile(target):
-        generation_item_list.append(GenerationItem(os.path.abspath(target)))
+        generation_item_list.append(GenerationItem(os.path.abspath(target), overwrite))
     else:
         for (root, _, files) in os.walk(target):
             for file in files:
@@ -172,41 +197,12 @@ def generate_generation_item_list(target: os.PathLike, ignore_list: StringList, 
 
 
 def err_exit(message: str, code: int) -> None:
-    """Exits program with error
-
-    Parameters
-    ----------
-    message : str
-        error message
-    code : int
-        exit code
-    """
 
     print(f'ERROR - {message}')
     exit(code)
 
 
 def check_input_output_valid(target: os.PathLike, ignore_list: StringList) -> (bool, int, str):
-    """Checks if given input was valid
-
-    Parameters
-    ----------
-    target : os.PathLike
-        target input location
-    output : os.PathLike
-        Markdown output location
-    ignore_list : list of str
-        list of filenames to ignore
-
-    Returns
-    -------
-    valid : bool
-        True if valid, false otherwise
-    err_code : int
-        Error code if applicable
-    err_message : str
-        Error message if applicable
-    """
 
     valid = False
     err_code = -1
@@ -228,9 +224,6 @@ def check_input_output_valid(target: os.PathLike, ignore_list: StringList) -> (b
 
 
 def print_version_info() -> None:
-    """Function that prints version, copyright, and author information
-    """
-
     print(f'npdoc2md v{__version__}\n')
     print(f'Copyright (c) {__copyright__}')
     print(f'Author: {__author__}')
@@ -251,7 +244,7 @@ def parse_args():
         print_version_info()
         exit()
 
-    valid, err_code, err_message = check_input_output_valid(args['target'], args['output'], args['ignore'])
+    valid, err_code, err_message = check_input_output_valid(args['input'], args['skip'])
     if not valid:
         err_exit(err_message, err_code)
 
@@ -260,5 +253,13 @@ def parse_args():
     else:
         ignore_list = args['skip']
 
+    generator = DocGenerator(args['input'], ignore_list)
+    return generator, not args['createtemp']
+
 def main():
-    pass
+    generator, overwrite = parse_args()
+    generator.generate_docs(overwrite)
+
+
+if __name__ == '__main__':
+    main()
