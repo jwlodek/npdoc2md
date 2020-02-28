@@ -32,6 +32,7 @@ docstring_descriptors = {
     'Methods'       : ['Method',            'Doc'],
     'Returns'       : ['Return Variable',   'Type', 'Doc'],
     'Parameters'    : ['Parameter',         'Type', 'Doc'],
+    'Raises'        : ['Error',             'Type', 'Doc'],
 }
 
 
