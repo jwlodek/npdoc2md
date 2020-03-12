@@ -15,7 +15,6 @@ import logging
 
 # Import typing to use python3 typing features
 from typing import List
-StringList = List[str]
 
 # Current script version
 __version__     = '0.0.1'
@@ -24,7 +23,7 @@ __author__      = 'Jakub Wlodek'
 __url__         = 'https://github.com/jwlodek/npdoc2md'
 
 
-# Descriptors possible in docstrings, used for tables
+# Descriptors possible in docstrings, used for table column names
 docstring_descriptors = {
     'Classes'       : ['Class',             'Doc'],
     'Functions'     : ['Function',          'Doc'],
@@ -43,11 +42,14 @@ class DocStringAttribute:
     ----------
     attribute_name : str
         Name of the attribute
-    attribute_elements : list of list of str
+    attribute_elements : List[List[str]]
         List of elements assigned to the attribute for the current instance
     """
 
     def __init__(self, attribute_name : str):
+        """constructor for DocstringAttribute
+        """
+
         self.attribute_name = attribute_name
         self.attribute_elements = []
 
@@ -104,7 +106,7 @@ class ItemInstance:
         self.detailed_description = f'{self.detailed_description}\n{detailed_description_line}'
 
 
-    def add_descriptor(self, descriptor_type: str, descriptor_elements: StringList):
+    def add_descriptor(self, descriptor_type: str, descriptor_elements: List[str]):
         """Creates a new descriptor
         
         Parameters
@@ -334,7 +336,7 @@ class ModuleInstance(ItemInstance):
 InstanceList = List[ItemInstance]
 
 
-def add_docstring_to_instance(instance: ItemInstance, doc_string: StringList) -> None:
+def add_docstring_to_instance(instance: ItemInstance, doc_string: List[str]) -> None:
     """Function that parses docstring to data structures and adds to instance
 
     Parameters
@@ -361,7 +363,7 @@ def add_docstring_to_instance(instance: ItemInstance, doc_string: StringList) ->
             if len(docstring_descriptors[current_descriptor]) == 3:
                 name_type = stripped.split(':')
                 if len(name_type) == 1:
-                    name_type.append('Unknown')
+                    name_type.insert(0, 'Unknown')
                 descriptor_elem = descriptor_elem + name_type
             else:
                 descriptor_elem.append(stripped.split('(')[0])
@@ -377,12 +379,12 @@ def add_docstring_to_instance(instance: ItemInstance, doc_string: StringList) ->
         i = i + 1
 
 
-def grab_module_instance(file_contents: StringList, file_name: str, parent_package=None) -> InstanceList:
+def grab_module_instance(file_contents: List[str], file_name: str, parent_package: str=None) -> InstanceList:
     """Function that generates complete instance object for module
 
     Parameters
     ----------
-    file_contents : list of str
+    file_contents : List[str]
         Lines in python module file
     file_name : str
         Name of the file or module
@@ -550,7 +552,7 @@ class MDConverter:
 
 
 
-def generate_conversion_item_list(target: os.PathLike, ignore_list: StringList) -> ConversionList:
+def generate_conversion_item_list(target: os.PathLike, ignore_list: List[str]) -> ConversionList:
     """Generates list of all conversion items
 
     Parameters
@@ -594,7 +596,7 @@ def err_exit(message: str, code: int) -> None:
 
 
 
-def check_input_output_valid(target: os.PathLike, output: os.PathLike, ignore_list: StringList) -> (bool, int, str):
+def check_input_output_valid(target: os.PathLike, output: os.PathLike, ignore_list: List[str]) -> (bool, int, str):
     """Checks if given input was valid
 
     Parameters

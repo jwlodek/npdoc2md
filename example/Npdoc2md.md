@@ -4,10 +4,8 @@ Script for autogenerating markdown documentation given path to python package wi
 
 
 
-
 @author: Jakub Wlodek  
 @created: Feb-6-2020
-
 
 #### Classes
 
@@ -15,22 +13,23 @@ Script for autogenerating markdown documentation given path to python package wi
 -----|-----
  DocStringAttribute | Stores docstring attribute and its elements. Ex(Parameters)
  ItemInstance | Base class for encountered programmatic instances
- FunctionInstance | Represents an encountered function or method
- ClassInstance | Represents an encountered class
- ModuleInstance | Represents an encountered module
- ConversionItem | Single file that needs to be converted. Corresponds to one ModuleInstance object
- MDConverter | Main conversion driver class
+ FunctionInstance(ItemInstance) | Class representing function instances
+ ClassInstance(ItemInstance) | Class representing class instances
+ ModuleInstance(ItemInstance) | Top Level module instance class
+ ConversionItem | Class representing single file to convert
+ MDConverter | Main Driver class for script
 
 #### Functions
 
  Function  | Doc
 -----|-----
- add_docstring_to_instance | Function that parses a docstring into data structures and adds it to instance object
- grab_module_instance | Function that takes a module, and generates all instance objects in a top level module instance
- generate_conversion_item_list | Generates conversion item objects given target
- err_exit | Exits program with an error
- check_input_output_valid | Checks if given inputs are valid
- parse_args | Parses user arguments
+ add_docstring_to_instance | Function that parses docstring to data structures and adds to instance
+ grab_module_instance | Function that generates complete instance object for module
+ generate_conversion_item_list | Generates list of all conversion items
+ err_exit | Exits program with error
+ check_input_output_valid | Checks if given input was valid
+ print_version_info | Function that prints version, copyright, and author information
+ parse_args | Function that parses user arguments
 
 
 
@@ -51,7 +50,7 @@ Stores docstring attribute and its elements. Ex(Parameters)
  Attribute  | Type  | Doc
 -----|----------|-----
  attribute_name  |  str | Name of the attribute
- attribute_elements  |  list of list of str | List of elements assigned to the attribute for the current instance
+ attribute_elements  |  List[List[str]] | List of elements assigned to the attribute for the current instance
 
 
 
@@ -59,10 +58,10 @@ Stores docstring attribute and its elements. Ex(Parameters)
 ### __init__
 
 ```python
-def __init__(self, attribute_name)
+def __init__(self, attribute_name : str)
 ```
 
-
+constructor for DocstringAttribute
 
 
 
@@ -100,11 +99,11 @@ Base class for encountered programmatic instances
 -----|-----
  set_simple_description | Initializes the simple description
  add_to_detailed_description | Appends to the detailed description
- add_descriptor | Adds a new descriptor
- generate_md_table_from_descriptor | Generates markdown table given descriptor
- get_usage_str | Generates usage markdown
- convert_to_markdown | Converts current instance state to markdown
- __format__ | Override of base format class
+ add_descriptor | Creates a new descriptor
+ generate_md_table_from_descriptor | Generates markdown table for descriptor
+ get_usage_str | Gets markdown usage string
+ convert_to_markdown | Generates markdown for instance
+ __format__ | Override of standard format function
 
 
 
@@ -168,7 +167,7 @@ Appends to the detailed description
 ### add_descriptor
 
 ```python
-def add_descriptor(self, descriptor_type: str, descriptor_elements: StringList)
+def add_descriptor(self, descriptor_type: str, descriptor_elements: List[str])
 ```
 
 Creates a new descriptor
@@ -326,12 +325,12 @@ Class representing class instances
 
 
 
-
 #### Methods
 
  Method  | Doc
 -----|-----
  add_sub_instance | Adds a sub-instance (methods)
+ generate_method_descriptor | Function that auto-generates the method descriptor from methods in class
  convert_to_markdown | Override of base class, returns its own markdown plus sub instances
 
 
@@ -363,6 +362,20 @@ Adds a sub-instance (methods)
 
 instance : ItemInstance
 item instance to add as sub-instance
+
+
+
+
+
+### generate_method_descriptor
+
+```python
+def generate_method_descriptor(self)
+```
+
+Function that auto-generates the method descriptor from methods in class
+
+
 
 
 
@@ -408,12 +421,12 @@ Top Level module instance class
 
 
 
-
 #### Methods
 
  Method  | Doc
 -----|-----
  add_sub_instance | Adds a sub-instance (methods)
+ generate_class_function_descriptors | Function that generates descriptors for included classes and functions in the module
  convert_to_markdown | Override of base class, returns its own markdown plus sub instances
 
 
@@ -445,6 +458,20 @@ Adds a sub-instance (methods)
 
 instance : ItemInstance
 item instance to add as sub-instance
+
+
+
+
+
+### generate_class_function_descriptors
+
+```python
+def generate_class_function_descriptors(self)
+```
+
+Function that generates descriptors for included classes and functions in the module
+
+
 
 
 
@@ -483,7 +510,7 @@ Override of base class, returns its own markdown plus sub instances
 ### add_docstring_to_instance
 
 ```python
-def add_docstring_to_instance(instance: ItemInstance, doc_string: StringList) -> None
+def add_docstring_to_instance(instance: ItemInstance, doc_string: List[str]) -> None
 ```
 
 Function that parses docstring to data structures and adds to instance
@@ -505,7 +532,7 @@ Function that parses docstring to data structures and adds to instance
 ### grab_module_instance
 
 ```python
-def grab_module_instance(file_contents: StringList, file_name: str, parent_package=None) -> InstanceList
+def grab_module_instance(file_contents: List[str], file_name: str, parent_package: str=None) -> InstanceList
 ```
 
 Function that generates complete instance object for module
@@ -517,7 +544,7 @@ Function that generates complete instance object for module
 
  Parameter  | Type  | Doc
 -----|----------|-----
- file_contents  |  list of str | Lines in python module file
+ file_contents  |  List[str] | Lines in python module file
  file_name  |  str | Name of the file or module
  parent_package=None  |  str | name of the parent package (if applicable)
 
@@ -630,9 +657,9 @@ Main Driver class for script
 
  Method  | Doc
 -----|-----
- convert_doc_to_md | Converts all docstrings to markdown
- generate_markdown_for_item | Writes generated markdown to file
- execute_conversion_process | Main driver function
+ convert_doc_to_md | Converts docstrings to markdown internally
+ generate_markdown_for_item | Generates a markdown file for given conversion item
+ execute_conversion_process | Main Driver function for converter
 
 
 
@@ -706,7 +733,7 @@ Main Driver function for converter
 ### generate_conversion_item_list
 
 ```python
-def generate_conversion_item_list(target: os.PathLike, ignore_list: StringList) -> ConversionList
+def generate_conversion_item_list(target: os.PathLike, ignore_list: List[str]) -> ConversionList
 ```
 
 Generates list of all conversion items
@@ -756,7 +783,7 @@ Exits program with error
 ### check_input_output_valid
 
 ```python
-def check_input_output_valid(target: os.PathLike, output: os.PathLike, ignore_list: StringList) -> (bool, int, str)
+def check_input_output_valid(target: os.PathLike, output: os.PathLike, ignore_list: List[str]) -> (bool, int, str)
 ```
 
 Checks if given input was valid
@@ -779,6 +806,20 @@ Checks if given input was valid
  valid  |  bool | True if valid, false otherwise
  err_code  |  int | Error code if applicable
  err_message  |  str | Error message if applicable
+
+
+
+
+
+### print_version_info
+
+```python
+def print_version_info() -> None
+```
+
+Function that prints version, copyright, and author information
+
+
 
 
 
