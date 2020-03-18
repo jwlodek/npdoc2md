@@ -53,7 +53,10 @@ class GenerationInstance:
         for descriptor in self.descriptors:
             desc_string = f'{desc_string}{tabs}{descriptor.attribute_name}\n{tabs}{"-" * len(descriptor.attribute_name)}\n'
             for elem in descriptor.attribute_elements:
-                desc_string = f'{desc_string}{tabs}{elem.strip()}\n{tabs}    TODO\n'
+                val = elem.strip()
+                if descriptor.attribute_name in ['Returns', 'Parameters', 'Attributes'] and ':' not in val:
+                    val = f'{val} : TODO'
+                desc_string = f'{desc_string}{tabs}{val}\n{tabs}    TODO\n'
             
             descriptor_counter += 1
             if descriptor_counter < len(self.descriptors):
@@ -119,6 +122,9 @@ class GenerationItem:
         for line in contents:
             stripped = line.strip()
             if line.startswith('class'):
+                if class_instance is not None:
+                    class_instance.add_descriptor('Attributes', class_attributes)
+                    class_attributes = []
                 current_instance = GenerationInstance(stripped.split(' ')[1][:-1], 1)
                 class_instance = current_instance
                 mod_instance.sub_gen_items.append(current_instance)
