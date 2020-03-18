@@ -64,6 +64,34 @@ You may also see the `Npdoc2md.md` file in this repository which was generated b
 py .\npdoc2md.py -i .\npdoc2md.py -o .\example\.
 ```
 
+### Generating template docs
+
+Writing out all of the docstrings for a project is a lengthy process, so a second helper script was written to help with generating template np docs. It has the following usage:
+```
+usage: code2npdoc.py [-h] [-v] -i INPUT [-c] [-s SKIP [SKIP ...]] [-d]
+
+A utility for auto-creating base numpy style docstrings for an entire python
+project.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -v, --version         Add this flag for displaying version information.
+  -i INPUT, --input INPUT
+                        Path to target python project or file
+  -c, --createtemp      If this flag is set, code2npdoc will create a
+                        temporary conversion folder without overriding your
+                        sources.
+  -s SKIP [SKIP ...], --skip SKIP [SKIP ...]
+                        List of filenames/directories to skip.
+  -d, --debug           Add this flag to print detailed log messages during
+                        conversion.
+```
+With similar flags as the base `npdoc2md` script. Add the `-c` flag if you don't want your original file to be auto-overwritten. An example of running this script on the `npdoc2md` file is as follows:
+
+```
+py .\code2npdoc -i npdoc2md.py -c
+```
+
 ### License
 
 MIT License  
