@@ -85,6 +85,7 @@ class GenerationInstance:
 
         self.descriptors.append(DocStringAttribute(name, elements))
 
+
     def make_descriptor_string(self):
         """Generates docstring for instance
 
@@ -96,18 +97,13 @@ class GenerationInstance:
 
         desc_string = ''
         tabs = '    ' * self.doc_level
-        descriptor_counter = 0
         for descriptor in self.descriptors:
-            desc_string = f'{desc_string}{tabs}{descriptor.attribute_name}\n{tabs}{"-" * len(descriptor.attribute_name)}\n'
+            desc_string = f'{desc_string}\n{tabs}{descriptor.attribute_name}\n{tabs}{"-" * len(descriptor.attribute_name)}\n'
             for elem in descriptor.attribute_elements:
                 val = elem.strip()
                 if descriptor.attribute_name in ['Returns', 'Parameters', 'Attributes'] and ':' not in val:
                     val = f'{val} : TODO'
                 desc_string = f'{desc_string}{tabs}{val}\n{tabs}    TODO\n'
-            
-            descriptor_counter += 1
-            if descriptor_counter < len(self.descriptors):
-                desc_string = f'{desc_string}\n'
 
         return desc_string
 
@@ -144,14 +140,14 @@ class ModuleGenerationInstance:
         out = ''
         line_counter = 0
         while line_counter < len(self.original_module_text):
-            line = self.original_module_text[line_counter]
-            match = self.return_match(line)
+            line    = self.original_module_text[line_counter]
+            match   = self.return_match(line)
             if match is None:
                 out = f'{out}{line}'
             elif line_counter < len(self.original_module_text) - 1 and self.original_module_text[line_counter + 1].strip().startswith('"""'):
                     out = f'{out}{line}'
             else:
-                out = f'{out}{line}{"    " * match[1]}"""TODO\n\n{match[2]}{"    " * match[1]}"""\n\n'
+                out = f'{out}{line}{"    " * match[1]}"""TODO\n{match[2]}{"    " * match[1]}"""'
 
 
             line_counter = line_counter + 1
@@ -248,15 +244,16 @@ class GenerationItem:
             elif stripped.startswith('def'):
                 current_instance = GenerationInstance(stripped.split(' ')[1].split('(')[0], 2)
                 params = line.split('(', 1)[1].split(')', 1)[0].split(',')
-                print(params)
                 if len(params) > 1:
                     current_instance.add_descriptor('Parameters', params[1:])
                 mod_instance.sub_gen_items.append(current_instance)
             elif stripped.startswith('return'):
-                current_instance.add_descriptor('Returns', stripped.split(' ', 1)[1].split(','))
+                return_statement = stripped.split(' ', 1)
+                if len(return_statement) > 1:
+                    current_instance.add_descriptor('Returns', return_statement[1].split(','))
             elif stripped.startswith('self') and class_instance is not None and current_instance.name=='__init__':
-                attr = stripped.split('=')[0].split('.',1)[1]
-                if attr not in class_attributes:
+                attr = stripped.split('=')[0].split('.')[1].strip()
+                if attr not in class_attributes and not attr.endswith(')'):
                     class_attributes.append(attr)
 
         if class_instance is not None:
