@@ -15,6 +15,7 @@ setuptools.setup(
     author_email='jwlodek.dev@gmail.com',
     license='MIT',
     url='https://github.com/jwlodek/npdoc2md',
+    py_modules=['npdoc2md', 'code2npdoc'],
     entry_points={
         'console_scripts': [
             'npdoc2md = npdoc2md:main',
