@@ -545,9 +545,12 @@ class MDConverter:
         """Main Driver function for converter
         """
 
+        logger = logging.getLogger()
+
         for conversion_item in self.conversion_item_list:
+            logger.debug(f'Converting docstrings to markdown for item {conversion_item.file_name}')
             self.convert_doc_to_md(conversion_item)
-            #print(f'{conversion_item.module_instance}')
+            logger.debug(f'Writing markdown file for item {conversion_item.file_name}')
             self.generate_markdown_for_item(conversion_item)
 
 
@@ -568,14 +571,18 @@ def generate_conversion_item_list(target: os.PathLike, ignore_list: List[str]) -
     conversion_item_list : ConversionList
         List of all discovered files as conversion items
     """
+
+    logger = logging.getLogger()
     conversion_item_list = []
 
     if os.path.isfile(target):
+        logger.debug(f'Target {target} is file. Creating conversion item')
         conversion_item_list.append(ConversionItem(os.path.abspath(target)))
     else:
         for (root, _, files) in os.walk(target):
             for file in files:
                 if file not in ignore_list and file.endswith('.py'):
+                    logger.debug(f'Creating conversion item for module: {file}')
                     conversion_item_list.append(ConversionItem(os.path.abspath(os.path.join(root, file)), parent_package=os.path.basename(target)))
 
     return conversion_item_list
@@ -709,9 +716,10 @@ def main():
 
     md_converter, enable_logging = parse_args()
     
-    #logger = logging.getLogger()
-    #if not enable_logging():
-    #    logger.disabled = True
+    if enable_logging:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.ERROR)
 
     md_converter.execute_conversion_process()
 
