@@ -50,8 +50,8 @@ class DocStringAttribute:
         """constructor for DocstringAttribute
         """
 
-        self.attribute_name = attribute_name
-        self.attribute_elements = []
+        self.attribute_name         = attribute_name
+        self.attribute_elements     = []
 
 
 class ItemInstance:
@@ -75,11 +75,11 @@ class ItemInstance:
         """Constructor for ItemInstance
         """
 
-        self.name = name
-        self.usage = usage
-        self.simple_description = ''
-        self.detailed_description = ''
-        self.descriptors = {}
+        self.name                   = name
+        self.usage                  = usage
+        self.simple_description     = ''
+        self.detailed_description   = ''
+        self.descriptors            = {}
 
 
     def set_simple_description(self, simple_description: str) -> None:
@@ -402,9 +402,10 @@ def grab_module_instance(file_contents: List[str], file_name: str, parent_packag
         module_name = parent_package + '.py'
     else:
         module_name = file_name
+    
     top_module_instance = ModuleInstance(module_name)
-    parent_instance = top_module_instance
-    current_instance = None
+    parent_instance     = top_module_instance
+    current_instance    = None
 
     line_counter = 0
 
@@ -618,8 +619,8 @@ def check_input_output_valid(target: os.PathLike, output: os.PathLike, ignore_li
         Error message if applicable
     """
 
-    valid = False
-    err_code = -1
+    valid       = False
+    err_code    = -1
     err_message = None
 
     if not os.path.exists(target):
@@ -673,10 +674,11 @@ def parse_args() -> (MDConverter, bool):
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-v', '--version', action='store_true', help='Use this flag to print out npdoc2md version info.')
-    parser.add_argument('-i', '--input', required= not ('-v' in sys.argv or '--version' in sys.argv), help='The path to the target python project or file to convert.')
-    parser.add_argument('-o', '--output', required= not ('-v' in sys.argv or '--version' in sys.argv), help='The output directory where the markdown files should be placed.')
-    parser.add_argument('-s', '--skip', nargs='+', help='List of filenames/directories to skip.')
+    parser.add_argument('-v', '--version',  action='store_true', help='Use this flag to print out npdoc2md version info.')
+    is_version = ('-v' in sys.argv or '--version' in sys.argv)
+    parser.add_argument('-i', '--input',    required=not is_version, help='The path to the target python project or file to convert.')
+    parser.add_argument('-o', '--output',   required=not is_version, help='The output directory where the markdown files should be placed.')
+    parser.add_argument('-s', '--skip',     nargs='+', help='List of filenames/directories to skip.')
     parser.add_argument('-d', '--debug', action='store_true', help='Add this flag to print detailed log messages during conversion.')
     args = vars(parser.parse_args())
 
@@ -701,7 +703,10 @@ def parse_args() -> (MDConverter, bool):
     return converter, args['debug']
 
 
-if __name__ == "__main__":
+def main():
+    """Main runner function
+    """
+
     md_converter, enable_logging = parse_args()
     
     #logger = logging.getLogger()
@@ -709,3 +714,7 @@ if __name__ == "__main__":
     #    logger.disabled = True
 
     md_converter.execute_conversion_process()
+
+
+if __name__ == "__main__":
+    main()

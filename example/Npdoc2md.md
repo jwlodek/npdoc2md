@@ -30,6 +30,7 @@ Script for autogenerating markdown documentation given path to python package wi
  check_input_output_valid | Checks if given input was valid
  print_version_info | Function that prints version, copyright, and author information
  parse_args | Function that parses user arguments
+ main | Main runner function
 
 
 
@@ -842,6 +843,20 @@ Function that parses user arguments
 -----|----------|-----
  converter  |  MDConverter | Main converter object
  debug  |  bool | toggle for debug printing
+
+
+
+
+
+### main
+
+```python
+def main()
+```
+
+Main runner function
+
+
 
 
 

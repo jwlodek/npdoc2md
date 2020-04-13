@@ -45,8 +45,8 @@ class DocStringAttribute:
         """Initializer for docstring attribute
         """
 
-        self.attribute_name = attribute_name
-        self.attribute_elements = elements
+        self.attribute_name         = attribute_name
+        self.attribute_elements     = elements
 
 
 class GenerationInstance:
@@ -67,9 +67,9 @@ class GenerationInstance:
         """Initializer for GenerationInstance
         """
 
-        self.name = name
-        self.descriptors = []
-        self.doc_level = doc_level
+        self.name           = name
+        self.descriptors    = []
+        self.doc_level      = doc_level
 
 
     def add_descriptor(self, name : str, elements : List[str]):
@@ -204,11 +204,11 @@ class GenerationItem:
         """Initializer for GenerationItem
         """
 
-        self.target = os.path.abspath(target_file_path)
-        self.overwrite = overwrite
-        basename = os.path.basename(self.target).split('.')[0]
-        self.temp_file = os.path.join(os.path.dirname(self.target), f'__{basename}_temp__')
-        self.module_gen_instance = self.create_module_gen_instance()
+        self.target                 = os.path.abspath(target_file_path)
+        self.overwrite              = overwrite
+        basename                    = os.path.basename(self.target).split('.')[0]
+        self.temp_file              = os.path.join(os.path.dirname(self.target), f'__{basename}_temp__')
+        self.module_gen_instance    = self.create_module_gen_instance()
 
 
     def create_module_gen_instance(self) -> ModuleGenerationInstance:
@@ -296,8 +296,8 @@ class DocGenerator:
         """Initializer for DocGenerator
         """
 
-        self.target = target
-        self.ignore_list = ignore_list
+        self.target         = target
+        self.ignore_list    = ignore_list
 
 
     def generate_docs(self, overwrite):
@@ -405,7 +405,7 @@ def print_version_info() -> None:
     """Prints version and copyright info
     """
 
-    print(f'npdoc2md v{__version__}\n')
+    print(f'code2npdoc v{__version__}\n')
     print(f'Copyright (c) {__copyright__}')
     print(f'Author: {__author__}')
     print(f'{__url__}')
