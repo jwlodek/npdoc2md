@@ -397,6 +397,7 @@ def grab_module_instance(file_contents: List[str], file_name: str, parent_packag
         module instance object at top level
     """
 
+    logger = logging.getLogger(name='npdoc2md')
 
     if file_name == '__init__.py' and parent_package is not None:
         module_name = parent_package + '.py'
@@ -412,26 +413,41 @@ def grab_module_instance(file_contents: List[str], file_name: str, parent_packag
     while line_counter < len(file_contents):
         line = file_contents[line_counter]
         if line.strip().startswith('def'):
+            func_name   = line.strip().split('(')[0].split(' ')[1]
+            func_usage  = line.strip()[:-1]
+
             if line.startswith('def'):
                 parent_instance = top_module_instance
-            current_instance = FunctionInstance(line.strip().split('(')[0].split(' ')[1], line.strip()[:-1])
+                logger.debug(f'Found module function {func_name}')
+            else:
+                logger.debug(f'Found {parent_instance.name} method {func_name}')
+            
+            current_instance = FunctionInstance(func_name, func_usage)
             parent_instance.add_sub_instance(current_instance)
-        
+
         elif line.startswith('class'):
-            current_instance = ClassInstance(line.split(' ')[1][:-1], line.strip()[:-1])
+            class_name  = line.split(' ')[1][:-1]
+            class_usage = line.strip()[:-1]
+            logger.debug(f'Found class {class_name}')
+            
+            current_instance = ClassInstance(class_name, class_usage)
             top_module_instance.add_sub_instance(current_instance)
             parent_instance = current_instance
 
         if line.strip().startswith('"""'):
-            doc_string = line
-            line_counter = line_counter + 1
+            
+            doc_string      = line
+            line_counter    = line_counter + 1
             while not file_contents[line_counter].strip().endswith('"""'):
-                doc_string = doc_string + file_contents[line_counter]
-                line_counter = line_counter + 1
+                doc_string      = doc_string + file_contents[line_counter]
+                line_counter    = line_counter + 1
+            
             if current_instance is not None:
                 add_docstring_to_instance(current_instance, doc_string.splitlines())
+                logger.debug(f'Parsed docstring for {current_instance.name}')
             else:
                 add_docstring_to_instance(top_module_instance, doc_string.splitlines())
+                logger.debug(f'Parsed docstring for {top_module_instance.name}')
 
         line_counter = line_counter + 1
 
@@ -461,30 +477,40 @@ class ConversionItem:
         """Constructor for conversion item class
         """
 
+        logger              = logging.getLogger(name='npdoc2md')
         self.parent_package = parent_package
-        self.file_path = file_path
-        self.file_name = os.path.basename(self.file_path)
+        self.file_path      = file_path
+        self.file_name      = os.path.basename(self.file_path)
+
         if self.file_name == '__init__.py':
             self.file_name = os.path.basename(os.path.dirname(self.file_path))
+
         self.md_file_name = ''
+
         if self.file_name.endswith('.py'):
             title_elements = self.file_name[:-3].split('_')
         else:
             title_elements = self.file_name.split('_')
+
         for elem in title_elements:
             self.md_file_name = self.md_file_name + elem.capitalize()
-        self.md_file_name = self.md_file_name + '.md'
+
+        self.md_file_name       = self.md_file_name + '.md'
         self.converted_markdown = ''
-        self.module_instance = None
+        self.module_instance    = None
+        logger.debug(f'Mapped conversion from {self.file_name} -> {self.md_file_name}')
 
 
     def collect_docstrings(self) -> None:
         """Collects docstrings from file
         """
 
-        item_fp = open(self.file_path, 'r')
-        file_contents = item_fp.readlines()
-        self.module_instance = grab_module_instance(file_contents, os.path.basename(self.file_path), parent_package=self.parent_package)
+        logger          = logging.getLogger(name='npdoc2md')
+        item_fp         = open(self.file_path, 'r')
+        file_contents   = item_fp.readlines()
+        mod_file        = os.path.basename(self.file_path)
+        logger.debug(f'Collecting docstrings for module {mod_file}')
+        self.module_instance = grab_module_instance(file_contents, mod_file, parent_package=self.parent_package)
         item_fp.close()
 
 
@@ -545,7 +571,7 @@ class MDConverter:
         """Main Driver function for converter
         """
 
-        logger = logging.getLogger()
+        logger = logging.getLogger(name='npdoc2md')
 
         for conversion_item in self.conversion_item_list:
             logger.debug(f'Converting docstrings to markdown for item {conversion_item.file_name}')
@@ -572,7 +598,7 @@ def generate_conversion_item_list(target: os.PathLike, ignore_list: List[str]) -
         List of all discovered files as conversion items
     """
 
-    logger = logging.getLogger()
+    logger = logging.getLogger(name='npdoc2md')
     conversion_item_list = []
 
     if os.path.isfile(target):
@@ -599,7 +625,8 @@ def err_exit(message: str, code: int) -> None:
         exit code
     """
 
-    print(f'ERROR - {message}')
+    logger = logging.getLogger(name='npdoc2md')
+    logger.error(message)
     exit(code)
 
 
