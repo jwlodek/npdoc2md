@@ -232,7 +232,7 @@ class GenerationItem:
                 if class_instance is not None:
                     class_instance.add_descriptor('Attributes', class_attributes)
                     class_attributes = []
-                current_instance = GenerationInstance(stripped.split(' ')[1][:-1], 1)
+                current_instance = GenerationInstance(stripped.split(' ', 1)[1][:-1], 1)
                 class_instance = current_instance
                 mod_instance.sub_gen_items.append(current_instance)
             elif line.startswith('def'):
