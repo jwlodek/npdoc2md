@@ -447,6 +447,7 @@ def parse_args():
     generator = DocGenerator(args['input'], ignore_list)
     return generator, not args['createtemp']
 
+
 def main():
     """Main function
     """

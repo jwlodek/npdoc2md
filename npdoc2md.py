@@ -418,7 +418,7 @@ def grab_module_instance(file_contents: List[str], file_name: str, parent_packag
             parent_instance.add_sub_instance(current_instance)
         
         elif line.startswith('class'):
-            current_instance = ClassInstance(line.split(' ')[1][:-1], line.strip()[:-1])
+            current_instance = ClassInstance(line.split(' ', 1)[1][:-1], line.strip()[:-1])
             top_module_instance.add_sub_instance(current_instance)
             parent_instance = current_instance
 
