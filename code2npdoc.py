@@ -49,6 +49,10 @@ class DocStringAttribute:
         self.attribute_elements     = elements
 
 
+    def set_elements(self, elements):
+        self.attribute_elements = elements
+
+
 class GenerationInstance:
     """Class representing a function/class/method
 
@@ -68,7 +72,7 @@ class GenerationInstance:
         """
 
         self.name           = name
-        self.descriptors    = []
+        self.descriptors    = {}
         self.doc_level      = doc_level
 
 
@@ -83,7 +87,25 @@ class GenerationInstance:
             Descriptor elements
         """
 
-        self.descriptors.append(DocStringAttribute(name, elements))
+        self.descriptors[name] = DocStringAttribute(name, elements)
+
+
+    def has_descriptor(self, descriptor_name):
+        """Checks if current descriptor was already added for the generation instance
+
+        Parameters
+        ----------
+        descriptor_name : str
+            Name of the descriptor
+        """
+
+        return descriptor_name in self.descriptors
+
+
+    def update_descriptor(self, name, elements):
+        if self.has_descriptor(name):
+            self.descriptors[name].set_elements(elements)
+
 
     def make_descriptor_string(self):
         """Generates docstring for instance
@@ -97,7 +119,8 @@ class GenerationInstance:
         desc_string = ''
         tabs = '    ' * self.doc_level
         descriptor_counter = 0
-        for descriptor in self.descriptors:
+        for descriptor_name in self.descriptors:
+            descriptor = self.descriptors[descriptor_name]
             desc_string = f'{desc_string}{tabs}{descriptor.attribute_name}\n{tabs}{"-" * len(descriptor.attribute_name)}\n'
             for elem in descriptor.attribute_elements:
                 val = elem.strip()
@@ -106,7 +129,7 @@ class GenerationInstance:
                 desc_string = f'{desc_string}{tabs}{val}\n{tabs}    TODO\n'
             
             descriptor_counter += 1
-            if descriptor_counter < len(self.descriptors):
+            if descriptor_counter < len(self.descriptors.keys()):
                 desc_string = f'{desc_string}\n'
 
         return desc_string
@@ -245,7 +268,7 @@ class GenerationItem:
                 if len(params) > 0 and len(params[0].strip()) > 0:
                     current_instance.add_descriptor('Parameters', params)
                 mod_instance.sub_gen_items.append(current_instance)
-            elif stripped.startswith('def'):
+            elif stripped.startswith('def '):
                 current_instance = GenerationInstance(stripped.split(' ')[1].split('(')[0], 2)
                 params = line.split('(', 1)[1].split(')', 1)[0].split(',')
                 print(params)
@@ -253,8 +276,13 @@ class GenerationItem:
                     current_instance.add_descriptor('Parameters', params[1:])
                 mod_instance.sub_gen_items.append(current_instance)
             elif stripped.startswith('return'):
-                current_instance.add_descriptor('Returns', stripped.split(' ', 1)[1].split(','))
-            elif stripped.startswith('self') and class_instance is not None and current_instance.name=='__init__':
+                if ' ' in stripped:
+                    if current_instance.has_descriptor('Returns'):
+                        current_instance.update_descriptor('Returns', ['TODO'])
+                    else:
+                        current_instance.add_descriptor('Returns', stripped.split(' ', 1)[1].split(','))
+
+            elif stripped.startswith('self') and class_instance is not None and current_instance.name=='__init__' and '=' in stripped:
                 attr = stripped.split('=')[0].split('.',1)[1]
                 if attr not in class_attributes:
                     class_attributes.append(attr)
