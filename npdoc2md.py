@@ -353,7 +353,7 @@ def add_docstring_to_instance(instance: ItemInstance, doc_string: List[str]) -> 
         left_stripped = doc_string[i].lstrip()
         stripped = doc_string[i].strip()
         if i == 0:
-            instance.set_simple_description(stripped[3:])
+            instance.set_simple_description(stripped.replace('"""', ''))
         elif stripped not in docstring_descriptors.keys() and current_descriptor is None:
             instance.add_to_detailed_description(left_stripped)
         elif stripped in docstring_descriptors.keys():
@@ -423,11 +423,13 @@ def grab_module_instance(file_contents: List[str], file_name: str, parent_packag
             parent_instance = current_instance
 
         if line.strip().startswith('"""'):
-            doc_string = line
-            line_counter = line_counter + 1
-            while not file_contents[line_counter].strip().endswith('"""'):
-                doc_string = doc_string + file_contents[line_counter]
-                line_counter = line_counter + 1
+            doc_string = ""
+            while True:
+                doc_string += file_contents[line_counter]
+                if file_contents[line_counter].strip().endswith('"""'):
+                    break
+                else:
+                    line_counter = line_counter + 1
             if current_instance is not None:
                 add_docstring_to_instance(current_instance, doc_string.splitlines())
             else:
