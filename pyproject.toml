@@ -7,6 +7,7 @@ name = "npdoc2md"
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -23,7 +24,7 @@ dependencies = [
 dynamic = ["version"]
 license.file = "LICENSE"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 [project.scripts]
 npdoc2md = "npdoc2md.__main__:main"
 
@@ -125,18 +126,15 @@ root_package = "npdoc2md"
 channels = ["conda-forge"]
 platforms = ["linux-64"]
 
-[tool.pixi.pypi-dependencies]
-npdoc2md = { path = ".", editable = true }
-
 [tool.pixi.environments]
 default = { solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
+py310 = ["py310"]
+py311 = ["py311"]
+py312 = ["py312"]
+py313 = ["py313"]
+py314 = ["py314"]
 
-[tool.pixi.tasks]
-test = "pytest"
-test-w-cov = "pytest --cov --cov-report=html"
-lint = "pre-commit run --all-files"
-
+# Default dependencies
 [tool.pixi.dependencies]
 pytest = ">=9.0.1,<10"
 pre-commit = ">=4.4.0,<5"
@@ -144,4 +142,26 @@ ruff = ">=0.14.6,<0.15"
 tox = ">=4.32.0,<5"
 pytest-cov = ">=7.0.0,<8"
 import-linter = ">=2.7,<3"
-python = ">=3.13,<3.14"
+python = "*"
+
+[tool.pixi.tasks]
+lint = "pre-commit run --all-files"
+
+[tool.pixi.pypi-dependencies]
+npdoc2md = { path = ".", editable = true }
+
+# Define features for other python versions for matrix testing on CI.
+[tool.pixi.feature.py310.dependencies]
+python = "3.10.*"
+
+[tool.pixi.feature.py311.dependencies]
+python = "3.11.*"
+
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+
+[tool.pixi.feature.py313.dependencies]
+python = "3.13.*"
+
+[tool.pixi.feature.py314.dependencies]
+python = "3.14.*"
