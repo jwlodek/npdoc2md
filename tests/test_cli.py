@@ -5,11 +5,11 @@ from io import StringIO
 from pathlib import Path
 
 import pytest
-from npdoc2md._version import __version__
 from pytest import LogCaptureFixture, MonkeyPatch
 
 from npdoc2md.__main__ import main
 from npdoc2md._log import COLOR_MAP, ColorFormatter, handler, logger
+from npdoc2md._version import __version__
 
 
 def test_version():
