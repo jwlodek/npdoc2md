@@ -18,13 +18,13 @@ from npdoc2md.npdoc2md import (
 
 
 @pytest.mark.parametrize(
-    "ignore_private, expected_files",
+    "include_private, expected_files",
     [
-        (False, {"file1.py", "__init__.py", "subdir/file4.py", "_file5.py"}),
-        (True, {"file1.py", "__init__.py", "subdir/file4.py"}),
+        (True, {"file1.py", "__init__.py", "subdir/file4.py", "_file5.py"}),
+        (False, {"file1.py", "__init__.py", "subdir/file4.py"}),
     ],
 )
-def test_get_target_python_files(tmp_path, ignore_private, expected_files):
+def test_get_target_python_files(tmp_path, include_private, expected_files):
     # Create a temporary directory with some Python files and other files
     dir_path = tmp_path / "test_dir"
     dir_path.mkdir()
@@ -38,7 +38,7 @@ def test_get_target_python_files(tmp_path, ignore_private, expected_files):
     (dir_path / "_file5.py").touch()  # Private file
 
     # Test that get_target_python_files returns only .py files
-    python_files = get_target_python_files(dir_path, ignore_private)
+    python_files = get_target_python_files(dir_path, include_private)
     expected_files = {dir_path / file for file in expected_files}
     assert set(python_files) == expected_files
 
@@ -203,12 +203,14 @@ str | N/A | False | Markdown table representation of the docstring meta items
 
 def test_docstring_element_repr():
     assert DocToMarkdownElement.__doc__ is not None
-    element = ClassElement(DocToMarkdownElement, include_private=True)
+    element = ClassElement(
+        DocToMarkdownElement, private_whitelist=["__init__", "__repr__"]
+    )
     expected_repr = """## DocToMarkdownElement
 ```Python
 class DocToMarkdownElement(DocToMarkdownElementProtocol)
 ```
-Base class for elements that can be included in the markdown documentation (ex: functions, classes, methods)
+Base class for elements that can be included in the markdown docs.
 
 ### Attributes
 Attribute | Type | Optional | Default | Description
@@ -216,18 +218,18 @@ Attribute | Type | Optional | Default | Description
 name | str | False | N/A | Name of the element (ex: function name, class name)
 docstring | Docstring | False | N/A | Parsed docstring object for the element
 signature | str | False | N/A | Signature of the element (ex: function signature)
-level | int | False | N/A | Heading level for the element in the markdown documentation (ex: 1 for module, 2 for class, 3 for method)
+level | int | False | N/A | Heading level for the element in the markdown documentation. For example, 1 for module, 2 for class, 3 for method.
 ### Methods
 Method | Description
 --- | ---
-[__init__](#__init__) | Initialize the element with its name, docstring, signature, and heading level.
+[__init__](#__init__) | Initialize the element with its name, docstring, signature, and heading.
 [__repr__](#__repr__) | String representation of the element in markdown format.
 
 ### __init__
 ```Python
 def __init__(self, name: str, docstring: docstring_parser.common.Docstring, level: int, signature: str | None = None)
 ```
-Initialize the element with its name, docstring, signature, and heading level.
+Initialize the element with its name, docstring, signature, and heading.
 
 #### Parameters
 Parameter | Type | Optional | Default | Description
@@ -235,7 +237,7 @@ Parameter | Type | Optional | Default | Description
 name | str | False | N/A | Name of the element (ex: function name, class name)
 signature | str | True | None | Signature of the element (ex: function signature)
 docstring | Docstring | False | N/A | Parsed docstring object for the element
-level | int | False | N/A | Heading level for the element in the markdown documentation (ex: 1 for module, 2 for class, 3 for method)
+level | int | False | N/A | Heading level for the element in the markdown documentation. For example, 1 for module, 2 for class, 3 for method.
 
 ### __repr__
 ```Python

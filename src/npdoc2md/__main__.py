@@ -25,9 +25,16 @@ def main():
         help="Enable quiet mode (only errors will be logged)",
     )
     parser.add_argument(
-        "--ignore-private",
+        "--include-private",
         action="store_true",
-        help="Ignore private members (those starting with an underscore)",
+        help="Include private members (those starting with an underscore)",
+    )
+    parser.add_argument(
+        "--private-whitelist",
+        type=str,
+        nargs="+",
+        default=["__init__", "__repr__"],
+        help="List of private member names to include even without --include-private.",
     )
     parser.add_argument(
         "input_path",

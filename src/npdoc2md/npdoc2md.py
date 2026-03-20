@@ -36,7 +36,7 @@ logger = logging.getLogger("npdoc2md")
 class DocToMarkdownElementProtocol(Protocol):
     name: str
     docstring: Docstring
-    signature: str
+    signature: str | None
     level: int
 
 
@@ -93,18 +93,32 @@ def docstring_metas_to_md_table(name: str, level: int, meta: list[TableItemT]) -
 
     table = header
     for item in meta:
-        if isinstance(item, DocstringParam):
-            table += f"{item.arg_name} | {item.type_name} | {item.is_optional} | {item.default if item.is_optional else 'N/A'} | {item.description}\n"
-        elif isinstance(item, DocstringReturns):
-            table += f"{item.type_name} | {item.return_name if item.return_name is not None else 'N/A'} | {item.is_generator} | {item.description}\n"
-        elif isinstance(item, DocstringRaises):
-            table += f"{item.type_name} | {item.description}\n"
-        elif isinstance(item, DocstringDeprecated):
-            table += f"{item.version} | {item.description}\n"
-        elif isinstance(item, DocstringExample):
-            table += f"{item.snippet} | {item.description}\n"
+        description: str = ""
+        if isinstance(item, DocstringMeta):
+            description = item.description if item.description is not None else "N/A"
         elif isinstance(item, DocToMarkdownElementProtocol):
-            table += f"[{item.name}](#{item.name}) | {item.docstring.short_description if item.docstring.short_description is not None else 'N/A'}\n"
+            description = (
+                item.docstring.short_description
+                if item.docstring.short_description is not None
+                else "N/A"
+            )
+
+        description = description.replace(
+            "\n", " "
+        )  # Replace newlines in description w/ spaces
+
+        if isinstance(item, DocstringParam):
+            table += f"{item.arg_name} | {item.type_name} | {item.is_optional} | {item.default if item.is_optional else 'N/A'} | {description}\n"
+        elif isinstance(item, DocstringReturns):
+            table += f"{item.type_name} | {item.return_name if item.return_name is not None else 'N/A'} | {item.is_generator} | {description}\n"
+        elif isinstance(item, DocstringRaises):
+            table += f"{item.type_name} | {description}\n"
+        elif isinstance(item, DocstringDeprecated):
+            table += f"{item.version} | {description}\n"
+        elif isinstance(item, DocstringExample):
+            table += f"{item.snippet} | {description}\n"
+        elif isinstance(item, DocToMarkdownElementProtocol):
+            table += f"[{item.name}](#{item.name}) | {description}\n"
 
     # ruff: enable[E501]
 
@@ -231,7 +245,12 @@ class ClassElement(DocToMarkdownElement):
 
     methods: list[FunctionElement]
 
-    def __init__(self, cls: type, include_private: bool = False):
+    def __init__(
+        self,
+        cls: type,
+        include_private: bool = False,
+        private_whitelist: list[str] = None,
+    ):
         """Initialize a class's docstring representation.
 
         Includes the class's name, signature, docstring, and heading.
@@ -242,8 +261,12 @@ class ClassElement(DocToMarkdownElement):
             The class to parse for docstrings and sub-elements
         include_private : bool, default=False
             Whether to include private members in the documentation.
+        private_whitelist : list[str], default=[]
+            List of private member names to include even if include_private is False.
         """
 
+        if private_whitelist is None:
+            private_whitelist = []
         bases = ", ".join(base_cls.__name__ for base_cls in cls.__bases__)
         signature = (
             f"class {cls.__name__}({bases})"
@@ -265,9 +288,12 @@ class ClassElement(DocToMarkdownElement):
         target_methods = {
             method_name: method
             for method_name, method in cls.__dict__.items()
-            if inspect.isfunction(method)
-            or inspect.ismethod(method)
-            and (include_private or not method_name.startswith("_"))
+            if (inspect.isfunction(method) or inspect.ismethod(method))
+            and (
+                include_private
+                or not method_name.startswith("_")
+                or method_name in private_whitelist
+            )
         }
         self.methods = [
             FunctionElement(
@@ -299,7 +325,12 @@ class ModuleElement(DocToMarkdownElement):
     classes: list[ClassElement]
     functions: list[FunctionElement]
 
-    def __init__(self, module: ModuleType, include_private: bool = False):
+    def __init__(
+        self,
+        module: ModuleType,
+        include_private: bool = False,
+        private_whitelist: list[str] = None,
+    ):
         """Initialize the ModuleElement with the module's name, docstring, and heading.
 
         Also parses the classes and functions defined in the module as sub-elements.
@@ -310,8 +341,12 @@ class ModuleElement(DocToMarkdownElement):
             The module to parse for docstrings and sub-elements
         include_private : bool, default False
             Whether to include private members in the documentation.
+        private_whitelist : list[str], default=[]
+            List of private member names to include even if include_private is False.
         """
 
+        if private_whitelist is None:
+            private_whitelist = []
         super().__init__(
             name=module.__name__,
             signature=None,
@@ -327,7 +362,11 @@ class ModuleElement(DocToMarkdownElement):
         all_classes, all_functions = get_cls_and_func_defined_in_module(module)
 
         self.classes = [
-            ClassElement(cls=cls, include_private=include_private)
+            ClassElement(
+                cls=cls,
+                include_private=include_private,
+                private_whitelist=private_whitelist,
+            )
             for cls in all_classes.values()
         ]
 
@@ -347,15 +386,15 @@ class ModuleElement(DocToMarkdownElement):
         ]
 
 
-def get_target_python_files(input_path: Path, ignore_private: bool) -> list[Path]:
+def get_target_python_files(input_path: Path, include_private: bool) -> list[Path]:
     """Helper function to get list of target python files to process
 
     Parameters
     ----------
     input_path : Path
         Path to the input file or directory containing files to parse
-    ignore_private : bool
-        Whether to ignore private members (those starting with an underscore)
+    include_private : bool
+        Whether to include private members (those starting with an underscore)
 
     Returns
     -------
@@ -373,7 +412,7 @@ def get_target_python_files(input_path: Path, ignore_private: bool) -> list[Path
             if file_path.is_file():
                 all_src_files.append(file_path)
 
-    if ignore_private:
+    if not include_private:
         src_files = []
         for file in all_src_files:
             if file.name.startswith("_") and file.name != "__init__.py":
@@ -386,7 +425,10 @@ def get_target_python_files(input_path: Path, ignore_private: bool) -> list[Path
 
 
 def npdoc2md(
-    input_path: Path, output_path: Path, ignore_private: bool = False
+    input_path: Path,
+    output_path: Path,
+    include_private: bool = False,
+    private_whitelist: list[str] = None,
 ) -> dict[Path, str]:
     """Main function for converting docstrings to markdown
 
@@ -400,11 +442,15 @@ def npdoc2md(
         Path to the input file or directory containing files to parse
     output_path : Path
         Path to the output directory where markdown files will be saved
-    ignore_private : bool, optional
+    include_private : bool, optional
         Whether to ignore private members, by default False
+    private_whitelist : list[str], default=[]
+        List of private member names to include even if include_private is False
     """
 
-    src_files = get_target_python_files(input_path, ignore_private)
+    if private_whitelist is None:
+        private_whitelist = []
+    src_files = get_target_python_files(input_path, include_private)
     output_files: dict[Path, str] = {}
 
     for src_file in src_files:
@@ -420,7 +466,9 @@ def npdoc2md(
         output_file_path = get_target_output_file_path(
             src_file, input_path, output_path
         )
-        md_text = ModuleElement(module, include_private=ignore_private).__repr__()
+        md_text = ModuleElement(
+            module, include_private=include_private, private_whitelist=private_whitelist
+        ).__repr__()
         output_files[output_file_path] = md_text
 
     return output_files
