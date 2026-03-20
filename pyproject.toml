@@ -18,7 +18,7 @@ description = "CLI utility for autogenerating markdown docs from numpy-style doc
 # Docstring parser did not correctly handle numpy docstrings,
 # so for now install branch version from git with my fixes.
 dependencies = [
-    "docstring_parser@git+https://github.com/jwlodek/docstring_parser@compose-numpydoc-support-default",
+    "docstring_parser@git+https://github.com/rr-/docstring_parser",
 ]
 
 dynamic = ["version"]
@@ -138,7 +138,7 @@ py314 = ["py314"]
 [tool.pixi.dependencies]
 pytest = ">=9.0.1,<10"
 pre-commit = ">=4.4.0,<5"
-ruff = ">=0.14.6,<0.15"
+ruff = ">=0.15.0,<0.16"
 tox = ">=4.32.0,<5"
 pytest-cov = ">=7.0.0,<8"
 import-linter = ">=2.7,<3"

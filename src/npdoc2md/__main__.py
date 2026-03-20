@@ -12,7 +12,7 @@ def main():
     """Main entry point for the npdoc2md CLI utility."""
 
     parser = argparse.ArgumentParser(
-        description="CLI utility for autogenerating markdown docs from numpy-style docstrings."
+        description="Utility for autogenerating markdown from numpy-style docstrings."
     )
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument(

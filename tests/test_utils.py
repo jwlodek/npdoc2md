@@ -20,7 +20,8 @@ def test_create_output_directory(tmp_path):
     create_output_directory(output_dir)
     assert output_dir.exists() and output_dir.is_dir()
 
-    # Test that an error is raised if the directory cannot be created (e.g., due to permissions)
+    # Test that an error is raised if the directory cannot be created
+    # (e.g., due to permissions)
     non_creatable_dir = tmp_path / "non_creatable"
     non_creatable_dir.mkdir()
     non_creatable_dir.chmod(0o400)  # Remove write permissions

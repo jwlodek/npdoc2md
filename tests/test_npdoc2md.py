@@ -188,7 +188,7 @@ Parameter | Type | Optional | Default | Description
 name | str | False | N/A | Name of the docstring meta (ex: Parameters, Returns, Raises)
 level | int | False | N/A | Heading level for the markdown table
 meta | list[DocstringMetaT] | False | N/A | List of docstring meta items to include in the table
-"""
+"""  # noqa: E501
     assert result_params == expected_params
 
     assert docstring.returns is not None
@@ -247,5 +247,5 @@ String representation of the element in markdown format.
 Type | Variable Name | Is Generator | Description
 --- | --- | --- | ---
 str | N/A | False | Markdown representation of the element.
-"""
+"""  # noqa: E501
     assert element.__repr__() == expected_repr

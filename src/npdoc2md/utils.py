@@ -29,14 +29,15 @@ def create_output_directory(output_path: Path) -> None:
 def validate_paths(input_path: Path, output_path: Path) -> None:
     """Validate the input and output paths.
 
-    Checks if the input path exists and is readable, and if the output path is a directory that can be created or is writable.
+    Checks if the input path exists and is readable, and if the output path
+    is a directory that can be created or is writable.
 
     Raises
     ------
     FileNotFoundError
         If the input path does not exist.
     PermissionError
-        If the input path is not readable or if the output path cannot be created or is not writable.
+        If the input/output paths are not readable/writable.
     NotADirectoryError
         If the output path exists but is a file instead of a directory.
     """
@@ -85,7 +86,7 @@ def get_target_output_file_path(
         else Path(input_file.name)
     )
 
-    # Construct the output file path by joining the output base path with the relative path
+    # Build the output file path by joining the output base path with the rel path
     output_file = output_base_path / relative_path.with_suffix(".md")
 
     return output_file

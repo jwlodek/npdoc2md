@@ -1,9 +1,9 @@
 """Module for converting docstrings in Python files to markdown format.
 
 This module defines the main functionality for the npdoc2md package, which includes:
-- Classes for representing docstring elements (ModuleElement, ClassElement, FunctionDocstring)
-- A helper function for converting docstring meta information to markdown tables
-- The main function npdoc2md that orchestrates the process of converting docstrings to markdown
+- Classes for docstring elements (ModuleElement, ClassElement, FunctionDocstring)
+- A helper func for converting docstring meta information to markdown tables
+- The main func npdoc2md that orchestrates the conversion of docstrings to markdown
 """
 
 # Some standard lib imports
@@ -73,6 +73,7 @@ def docstring_metas_to_md_table(name: str, level: int, meta: list[TableItemT]) -
 
     logger.debug(f"Generating markdown table listing {len(meta)} {name}")
 
+    # ruff: disable[E501]
     header = ""
     if meta_type == DocstringParam:
         header = f"{'#' * level} {name}\n{' | '.join([name[:-1], 'Type', 'Optional', 'Default', 'Description'])}\n{' | '.join(['---'] * 5)}\n"
@@ -105,11 +106,13 @@ def docstring_metas_to_md_table(name: str, level: int, meta: list[TableItemT]) -
         elif isinstance(item, DocToMarkdownElementProtocol):
             table += f"[{item.name}](#{item.name}) | {item.docstring.short_description if item.docstring.short_description is not None else 'N/A'}\n"
 
+    # ruff: enable[E501]
+
     return table
 
 
 class DocToMarkdownElement(DocToMarkdownElementProtocol):
-    """Base class for elements that can be included in the markdown documentation (ex: functions, classes, methods)
+    """Base class for elements that can be included in the markdown docs.
 
     Attributes
     ----------
@@ -120,7 +123,8 @@ class DocToMarkdownElement(DocToMarkdownElementProtocol):
     signature : str
         Signature of the element (ex: function signature)
     level : int
-        Heading level for the element in the markdown documentation (ex: 1 for module, 2 for class, 3 for method)
+        Heading level for the element in the markdown documentation.
+        For example, 1 for module, 2 for class, 3 for method.
 
     """
 
@@ -134,7 +138,7 @@ class DocToMarkdownElement(DocToMarkdownElementProtocol):
     def __init__(
         self, name: str, docstring: Docstring, level: int, signature: str | None = None
     ):
-        """Initialize the element with its name, docstring, signature, and heading level.
+        """Initialize the element with its name, docstring, signature, and heading.
 
         Parameters
         ----------
@@ -145,7 +149,8 @@ class DocToMarkdownElement(DocToMarkdownElementProtocol):
         docstring : Docstring
             Parsed docstring object for the element
         level : int
-            Heading level for the element in the markdown documentation (ex: 1 for module, 2 for class, 3 for method)
+            Heading level for the element in the markdown documentation.
+            For example, 1 for module, 2 for class, 3 for method.
         """
         self.name = name
         self.signature = signature
@@ -216,29 +221,32 @@ class FunctionElement(DocToMarkdownElement):
 
 
 class ClassElement(DocToMarkdownElement):
-    """Class for representing class docstrings, which can contain methods as sub-elements.
+    """Representation of class docstrings, which can contain methods as sub-elements.
 
     Attributes
     ----------
     methods : list[FunctionElement]
-        List of methods defined in the class, represented as FunctionElement objects
+        List of methods defined in the class, represented as FunctionElement objects.
     """
 
     methods: list[FunctionElement]
 
     def __init__(self, cls: type, include_private: bool = False):
-        """Initalize Class Docstring representation with the class's name, signature, docstring, and heading level.
+        """Initialize a class's docstring representation.
+
+        Includes the class's name, signature, docstring, and heading.
 
         Parameters
         ----------
         cls : type
             The class to parse for docstrings and sub-elements
-        include_private : Optional[bool]; default False
-            Whether to include private members (those starting with an underscore) in the documentation.
+        include_private : bool, default=False
+            Whether to include private members in the documentation.
         """
 
+        bases = ", ".join(base_cls.__name__ for base_cls in cls.__bases__)
         signature = (
-            f"class {cls.__name__}({', '.join(base_cls.__name__ for base_cls in cls.__bases__)})"
+            f"class {cls.__name__}({bases})"
             if len(cls.__bases__) > 0
             else f"class {cls.__name__}"
         )
@@ -278,21 +286,21 @@ class ClassElement(DocToMarkdownElement):
 
 
 class ModuleElement(DocToMarkdownElement):
-    """Class for representing module docstrings, which can contain classes and functions as sub-elements.
+    """Representation of module docstrings, contain classes and funcs as sub-elements.
 
     Attributes
     ----------
     classes : list[ClassElement]
         List of classes defined in the module, represented as ClassElement objects
     functions : list[FunctionDocstring]
-        List of functions defined in the module, represented as FunctionDocstring objects
+        List of funcs defined in the module, represented as FunctionDocstring objects
     """
 
     classes: list[ClassElement]
     functions: list[FunctionElement]
 
     def __init__(self, module: ModuleType, include_private: bool = False):
-        """Initialize the ModuleElement with the module's name, signature, docstring, and heading level.
+        """Initialize the ModuleElement with the module's name, docstring, and heading.
 
         Also parses the classes and functions defined in the module as sub-elements.
 
@@ -300,8 +308,8 @@ class ModuleElement(DocToMarkdownElement):
         ----------
         module : ModuleType
             The module to parse for docstrings and sub-elements
-        include_private : Optional[bool]; default False
-            Whether to include private members (those starting with an underscore) in the documentation.
+        include_private : bool, default False
+            Whether to include private members in the documentation.
         """
 
         super().__init__(
@@ -382,9 +390,9 @@ def npdoc2md(
 ) -> dict[Path, str]:
     """Main function for converting docstrings to markdown
 
-    This function orchestrates the process of converting docstrings in Python files to markdown format.
-    It identifies the target Python files, imports them to access their docstrings,
-    and then parses the docstrings to generate markdown documentation.
+    This function orchestrates the process of converting docstrings in Python files
+    to markdown format. It identifies the target Python files, imports them to
+    access their docstrings, and then parses the docstrings to generate markdown docs.
 
     Parameters
     ----------
@@ -393,7 +401,7 @@ def npdoc2md(
     output_path : Path
         Path to the output directory where markdown files will be saved
     ignore_private : bool, optional
-        Whether to ignore private members (those starting with an underscore), by default False
+        Whether to ignore private members, by default False
     """
 
     src_files = get_target_python_files(input_path, ignore_private)
