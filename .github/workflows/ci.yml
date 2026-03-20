@@ -1,0 +1,58 @@
+---
+
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@8ca4608ef7f4daeb54f5205b20d0b7cb42f11143  # v0.8.14
+        with:
+          pixi-version: v0.56.0
+          cache: false
+          frozen: true
+
+      - name: Run linting checks
+        run: pixi run lint
+
+  test:
+    name: Unit Tests - Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@8ca4608ef7f4daeb54f5205b20d0b7cb42f11143  # v0.8.14
+        with:
+          pixi-version: v0.56.0
+          cache: true
+          frozen: true
+
+      - name: Run tests for given python version
+        run: pixi run -e py${{ matrix.python-version | replace('.', '') }} pytest --cov=npdoc2md --cov-report=xml --cov-report=term
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: ${{ matrix.python-version == '3.13' }}  # Only upload coverage for Python 3.13 to avoid duplicates
+        with:
+          name: Coverage
+          files: coverage.xml
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}

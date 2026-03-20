@@ -1,0 +1,167 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm[toml]>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "npdoc2md"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+description = "CLI utility for autogenerating markdown docs from numpy-style docstrings."
+
+# Docstring parser did not correctly handle numpy docstrings,
+# so for now install branch version from git with my fixes.
+dependencies = [
+    "docstring_parser@git+https://github.com/rr-/docstring_parser",
+]
+
+dynamic = ["version"]
+license.file = "LICENSE"
+readme = "README.md"
+requires-python = ">=3.10"
+[project.scripts]
+npdoc2md = "npdoc2md.__main__:main"
+
+[project.optional-dependencies]
+dev = [
+    "copier",
+    "pipdeptree",
+    "pre-commit",
+    "pyright",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "tox-direct",
+    "types-mock",
+    "import-linter",
+]
+
+[project.urls]
+GitHub = "https://github.com/jwlodek/npdoc2md"
+
+[[project.authors]] # Further authors may be added by duplicating this section
+email = "jwlodek.dev@gmail.com"
+name = "Jakub Wlodek"
+
+
+[tool.setuptools_scm]
+version_file = "src/npdoc2md/_version.py"
+
+[tool.pyright]
+typeCheckingMode = "standard"
+reportMissingImports = false # Ignore missing stubs in imported modules
+reportMissingTypeStubs = false
+
+[tool.pytest.ini_options]
+# Run pytest with all our checkers, and don't spam us with massive tracebacks on error
+addopts = """
+    --tb=native -vv
+    """
+# https://iscinumpy.gitlab.io/post/bound-version-constraints/#watch-for-warnings
+filterwarnings = "error"
+# Doctest python code in docs, python code in src docstrings, test functions in tests
+testpaths = "docs src tests"
+
+[tool.coverage.run]
+data_file = "/tmp/npdoc2md.coverage"
+
+[tool.coverage.paths]
+# Tests are run from installed location, map back to the src directory
+source = ["src", "**/site-packages/"]
+
+# tox must currently be configured via an embedded ini string
+# See: https://github.com/tox-dev/tox/issues/999
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+skipsdist=True
+
+[testenv:{pre-commit,type-checking,tests}]
+# Don't create a virtualenv for the command, requires tox-direct plugin
+direct = True
+passenv = *
+allowlist_externals =
+    pytest
+    pre-commit
+    pyright
+commands =
+    pre-commit: pre-commit run --all-files --show-diff-on-failure {posargs}
+    type-checking: pyright src tests {posargs}
+    tests: pytest --cov=npdoc2md --cov-report term --cov-report xml:cov.xml {posargs}
+"""
+
+[tool.ruff]
+src = ["src", "tests"]
+line-length = 88
+lint.select = [
+    "B",   # flake8-bugbear - https://docs.astral.sh/ruff/rules/#flake8-bugbear-b
+    "C4",  # flake8-comprehensions - https://docs.astral.sh/ruff/rules/#flake8-comprehensions-c4
+    "E",   # pycodestyle errors - https://docs.astral.sh/ruff/rules/#error-e
+    "F",   # pyflakes rules - https://docs.astral.sh/ruff/rules/#pyflakes-f
+    "W",   # pycodestyle warnings - https://docs.astral.sh/ruff/rules/#warning-w
+    "I",   # isort - https://docs.astral.sh/ruff/rules/#isort-i
+    "UP",  # pyupgrade - https://docs.astral.sh/ruff/rules/#pyupgrade-up
+    "SLF", # self - https://docs.astral.sh/ruff/settings/#lintflake8-self
+]
+exclude = [
+    "src/npdoc2md/_version.py",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# By default, private member access is allowed in tests
+# See https://github.com/DiamondLightSource/python-copier-template/issues/154
+# Remove this line to forbid private member access in tests
+"tests/**/*" = ["SLF001"]
+
+[tool.importlinter]
+root_package = "npdoc2md"
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+py310 = ["py310"]
+py311 = ["py311"]
+py312 = ["py312"]
+py313 = ["py313"]
+py314 = ["py314"]
+
+# Default dependencies
+[tool.pixi.dependencies]
+pytest = ">=9.0.1,<10"
+pre-commit = ">=4.4.0,<5"
+ruff = ">=0.15.0,<0.16"
+tox = ">=4.32.0,<5"
+pytest-cov = ">=7.0.0,<8"
+import-linter = ">=2.7,<3"
+python = "*"
+
+[tool.pixi.tasks]
+lint = "pre-commit run --all-files"
+
+[tool.pixi.pypi-dependencies]
+npdoc2md = { path = ".", editable = true }
+
+# Define features for other python versions for matrix testing on CI.
+[tool.pixi.feature.py310.dependencies]
+python = "3.10.*"
+
+[tool.pixi.feature.py311.dependencies]
+python = "3.11.*"
+
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
+
+[tool.pixi.feature.py313.dependencies]
+python = "3.13.*"
+
+[tool.pixi.feature.py314.dependencies]
+python = "3.14.*"

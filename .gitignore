@@ -7,3 +7,8 @@ demo/
 *egg*
 build/*
 dist/*
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+_version.py
