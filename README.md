@@ -1,6 +1,6 @@
 # npdoc2md
 
-A simple python utility for auto-converting numpy-style python docstrings to 
+A simple python utility for auto-converting numpy-style python docstrings to
 markdown for use with mkdocs, an entire package at a time. It also includes a second utility, `code2npdoc`, which will attempt to generate docstring templates given code for an entire project.
 
 ### Installation
@@ -107,5 +107,5 @@ code2npdoc -i npdoc2md.py -c
 
 ### License
 
-MIT License  
+MIT License
 Copyright (c) 2020, Jakub Wlodek

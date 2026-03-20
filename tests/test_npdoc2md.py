@@ -1,19 +1,37 @@
 import pytest
-from npdoc2md.npdoc2md import get_target_python_files, docstring_metas_to_md_table, DocToMarkdownElementProtocol, DocToMarkdownElement, ClassElement
-from docstring_parser.common import DocstringMeta, DocstringDeprecated, DocstringParam, DocstringRaises, DocstringReturns, DocstringExample
-from docstring_parser import parse, Style, compose, Docstring
+from docstring_parser import Docstring, Style, parse
+from docstring_parser.common import (
+    DocstringDeprecated,
+    DocstringExample,
+    DocstringMeta,
+    DocstringParam,
+    DocstringRaises,
+    DocstringReturns,
+)
+
+from npdoc2md.npdoc2md import (
+    ClassElement,
+    DocToMarkdownElement,
+    docstring_metas_to_md_table,
+    get_target_python_files,
+)
 
 
-@pytest.mark.parametrize("ignore_private, expected_files", [
-    (False, {"file1.py", "__init__.py", "subdir/file4.py", "_file5.py"}),
-    (True, {"file1.py", "__init__.py", "subdir/file4.py"}),
-])
+@pytest.mark.parametrize(
+    "ignore_private, expected_files",
+    [
+        (False, {"file1.py", "__init__.py", "subdir/file4.py", "_file5.py"}),
+        (True, {"file1.py", "__init__.py", "subdir/file4.py"}),
+    ],
+)
 def test_get_target_python_files(tmp_path, ignore_private, expected_files):
     # Create a temporary directory with some Python files and other files
     dir_path = tmp_path / "test_dir"
     dir_path.mkdir()
     (dir_path / "file1.py").touch()
-    (dir_path / "__init__.py").touch() # __init__.py should be included as it's not a private file
+    (
+        dir_path / "__init__.py"
+    ).touch()  # __init__.py should be included as it's not a private file
     (dir_path / "file3.txt").touch()  # Non-Python file
     (dir_path / "subdir").mkdir()
     (dir_path / "subdir" / "file4.py").touch()
@@ -27,22 +45,35 @@ def test_get_target_python_files(tmp_path, ignore_private, expected_files):
 
 def test_docstring_metas_to_md_table_empty():
     result = docstring_metas_to_md_table("Parameters", 2, [])
-    assert result == ''
+    assert result == ""
+
 
 def test_docstring_metas_to_md_table_invalid_type():
     with pytest.raises(ValueError):
-        docstring_metas_to_md_table("Metas", 2, [DocstringDeprecated([], "Deprecated", "1.0"), DocstringReturns([], "Returns something", "int", False, "result")])
+        docstring_metas_to_md_table(
+            "Metas",
+            2,
+            [
+                DocstringDeprecated([], "Deprecated", "1.0"),
+                DocstringReturns([], "Returns something", "int", False, "result"),
+            ],
+        )
 
 
-@pytest.mark.parametrize("optional, default, expected_default", [
-    (True, "42", "42"),
-    (True, None, "None"),
-    (False, "42", "N/A"),
-    (False, None, "N/A"),
-])
+@pytest.mark.parametrize(
+    "optional, default, expected_default",
+    [
+        (True, "42", "42"),
+        (True, None, "None"),
+        (False, "42", "N/A"),
+        (False, None, "N/A"),
+    ],
+)
 def test_docstring_metas_to_md_table_param_meta(optional, default, expected_default):
     param_meta = [
-        DocstringParam([], "Description for param1", "param1", "int", optional, default),
+        DocstringParam(
+            [], "Description for param1", "param1", "int", optional, default
+        ),
     ]
     result = docstring_metas_to_md_table("Parameters", 2, param_meta)
     expected = f"""## Parameters
@@ -56,7 +87,9 @@ param1 | int | {optional} | {expected_default} | Description for param1
 @pytest.mark.parametrize("is_generator", [True, False])
 def test_docstring_metas_to_md_table_returns_meta(is_generator):
     returns_meta = [
-        DocstringReturns([], "Description for return value", "int", is_generator, "result"),
+        DocstringReturns(
+            [], "Description for return value", "int", is_generator, "result"
+        ),
     ]
     result = docstring_metas_to_md_table("Returns", 2, returns_meta)
     expected = f"""## Returns
@@ -72,7 +105,7 @@ def test_docstring_metas_to_md_table_raises_meta():
         DocstringRaises([], "Description for ValueError", "ValueError"),
     ]
     result = docstring_metas_to_md_table("Raises", 2, raises_meta)
-    expected = f"""## Raises
+    expected = """## Raises
 Error | Description
 --- | ---
 ValueError | Description for ValueError
@@ -85,7 +118,7 @@ def test_docstring_metas_to_md_table_deprecated_meta():
         DocstringDeprecated([], "This function is deprecated", "1.0"),
     ]
     result = docstring_metas_to_md_table("Deprecated", 2, deprecated_meta)
-    expected = f"""## Deprecated
+    expected = """## Deprecated
 Version | Description
 --- | ---
 1.0 | This function is deprecated
@@ -98,7 +131,7 @@ def test_docstring_metas_to_md_table_example_meta():
         DocstringExample([], "This is an example snippet", "Example code snippet"),
     ]
     result = docstring_metas_to_md_table("Example", 2, example_meta)
-    expected = f"""## Example
+    expected = """## Example
 Snippet | Description
 --- | ---
 This is an example snippet | Example code snippet
@@ -108,10 +141,15 @@ This is an example snippet | Example code snippet
 
 def test_docstring_metas_to_md_table_element_protocol_meta():
     element_meta = [
-        DocToMarkdownElement(name="TestElement", signature="def test_element()", docstring=parse("Short description of TestElement.", style=Style.NUMPYDOC), level=2)
+        DocToMarkdownElement(
+            name="TestElement",
+            signature="def test_element()",
+            docstring=parse("Short description of TestElement.", style=Style.NUMPYDOC),
+            level=2,
+        )
     ]
     result = docstring_metas_to_md_table("Elements", 2, element_meta)
-    expected = f"""## Elements
+    expected = """## Elements
 Element | Description
 --- | ---
 [TestElement](#TestElement) | Short description of TestElement.
@@ -121,13 +159,17 @@ Element | Description
 
 def test_docstring_metas_to_table_multiple_metas():
     multiple_metas: list[DocstringMeta] = [
-        DocstringParam(["param"], "Description for param1", "param1", "int", True, "42"),
-        DocstringParam(["param"], "Description for param2", "param2", "str", False, "test"),
+        DocstringParam(
+            ["param"], "Description for param1", "param1", "int", True, "42"
+        ),
+        DocstringParam(
+            ["param"], "Description for param2", "param2", "str", False, "test"
+        ),
     ]
     docstring = Docstring(style=Style.NUMPYDOC)
     docstring.meta = multiple_metas
     result = docstring_metas_to_md_table("Parameters", 2, multiple_metas)
-    expected = f"""## Parameters
+    expected = """## Parameters
 Parameter | Type | Optional | Default | Description
 --- | --- | --- | --- | ---
 param1 | int | True | 42 | Description for param1
@@ -135,11 +177,12 @@ param2 | str | False | N/A | Description for param2
 """
     assert result == expected
 
+
 def test_docstring_metas_to_md_table_on_self():
     assert docstring_metas_to_md_table.__doc__ is not None
     docstring = parse(docstring_metas_to_md_table.__doc__, style=Style.NUMPYDOC)
     result_params = docstring_metas_to_md_table("Parameters", 2, docstring.params)
-    expected_params = f"""## Parameters
+    expected_params = """## Parameters
 Parameter | Type | Optional | Default | Description
 --- | --- | --- | --- | ---
 name | str | False | N/A | Name of the docstring meta (ex: Parameters, Returns, Raises)
@@ -150,7 +193,7 @@ meta | list[DocstringMetaT] | False | N/A | List of docstring meta items to incl
 
     assert docstring.returns is not None
     result_returns = docstring_metas_to_md_table("Returns", 2, [docstring.returns])
-    expected_returns = f"""## Returns
+    expected_returns = """## Returns
 Type | Variable Name | Is Generator | Description
 --- | --- | --- | ---
 str | N/A | False | Markdown table representation of the docstring meta items
@@ -161,7 +204,7 @@ str | N/A | False | Markdown table representation of the docstring meta items
 def test_docstring_element_repr():
     assert DocToMarkdownElement.__doc__ is not None
     element = ClassElement(DocToMarkdownElement, include_private=True)
-    expected_repr = f"""## DocToMarkdownElement
+    expected_repr = """## DocToMarkdownElement
 ```Python
 class DocToMarkdownElement(DocToMarkdownElementProtocol)
 ```

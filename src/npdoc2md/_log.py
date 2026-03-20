@@ -1,5 +1,6 @@
 import logging
 import sys
+
 logging.basicConfig()
 
 logger = logging.getLogger("npdoc2md")
@@ -15,9 +16,10 @@ COLOR_MAP = {
 # ANSI reset code to clear formatting after the log level
 RESET = "\033[0m"
 
+
 class ColorFormatter(logging.Formatter):
     """ANSI color formatter for warnings and errors.
-    
+
     Attributes
     ----------
     use_color : bool
@@ -26,7 +28,7 @@ class ColorFormatter(logging.Formatter):
 
     def __init__(self, fmt: str, use_color: bool = True):
         """Initialize the ColorFormatter.
-        
+
         Parameters
         ----------
         fmt : str
@@ -45,9 +47,7 @@ class ColorFormatter(logging.Formatter):
             original_levelname = record.levelname
             # Pad to 8 characters (length of "CRITICAL") for consistent alignment
             padded_levelname = original_levelname.ljust(8)
-            record.levelname = (
-                f"{COLOR_MAP[record.levelno]}{padded_levelname}{RESET}"
-            )
+            record.levelname = f"{COLOR_MAP[record.levelno]}{padded_levelname}{RESET}"
             base = super().format(record)
             # Restore the original levelname
             record.levelname = original_levelname

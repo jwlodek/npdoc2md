@@ -7,27 +7,30 @@ This module defines the main functionality for the npdoc2md package, which inclu
 """
 
 # Some standard lib imports
-from dataclasses import dataclass
-import logging
-
-from pathlib import Path
-
-# Import typing to use python3 typing features
-from typing import List
-
-from docstring_parser import parse, Docstring, DocstringMeta, Style, DocstringDeprecated, DocstringParam, DocstringRaises, DocstringReturns
-from docstring_parser.common import DocstringExample
-from typing import TypeVar
-from typing import Protocol, runtime_checkable
-from types import ModuleType
 import importlib
 import inspect
+import logging
+from pathlib import Path
+from types import ModuleType
+from typing import Protocol, TypeVar, runtime_checkable
+
+# Import typing to use python3 typing features
+from docstring_parser import (
+    Docstring,
+    DocstringDeprecated,
+    DocstringMeta,
+    DocstringParam,
+    DocstringRaises,
+    DocstringReturns,
+    Style,
+    parse,
+)
+from docstring_parser.common import DocstringExample
+
 from .utils import get_cls_and_func_defined_in_module, get_target_output_file_path
 
-
-import logging
-    
 logger = logging.getLogger("npdoc2md")
+
 
 @runtime_checkable
 class DocToMarkdownElementProtocol(Protocol):
@@ -36,6 +39,7 @@ class DocToMarkdownElementProtocol(Protocol):
     signature: str
     level: int
 
+
 TableItem = DocstringMeta | DocToMarkdownElementProtocol
 
 TableItemT = TypeVar("TableItemT", bound=TableItem)
@@ -43,7 +47,7 @@ TableItemT = TypeVar("TableItemT", bound=TableItem)
 
 def docstring_metas_to_md_table(name: str, level: int, meta: list[TableItemT]) -> str:
     """Helper function to convert docstring meta to markdown table
-    
+
     Parameters
     ----------
     name : str
@@ -62,13 +66,13 @@ def docstring_metas_to_md_table(name: str, level: int, meta: list[TableItemT]) -
     if len(meta) == 0:
         logger.warning(f"No items provided for {name} meta. Skipping table generation.")
         return ""
-    
+
     meta_type = type(meta[0])
     if not all(isinstance(item, meta_type) for item in meta):
         raise ValueError("All items in meta list must be of the same type")
-    
+
     logger.debug(f"Generating markdown table listing {len(meta)} {name}")
-    
+
     header = ""
     if meta_type == DocstringParam:
         header = f"{'#' * level} {name}\n{' | '.join([name[:-1], 'Type', 'Optional', 'Default', 'Description'])}\n{' | '.join(['---'] * 5)}\n"
@@ -119,14 +123,19 @@ class DocToMarkdownElement(DocToMarkdownElementProtocol):
         Heading level for the element in the markdown documentation (ex: 1 for module, 2 for class, 3 for method)
 
     """
+
     name: str
     docstring: Docstring
-    signature: str | None = None # Signature is optional since modules may not have a signature
+    signature: str | None = (
+        None  # Signature is optional since modules may not have a signature
+    )
     level: int
 
-    def __init__(self, name: str, docstring: Docstring, level: int, signature: str | None = None):
+    def __init__(
+        self, name: str, docstring: Docstring, level: int, signature: str | None = None
+    ):
         """Initialize the element with its name, docstring, signature, and heading level.
-        
+
         Parameters
         ----------
         name : str
@@ -153,31 +162,49 @@ class DocToMarkdownElement(DocToMarkdownElementProtocol):
         """
 
         repr = f"{'#' * self.level} {self.name}\n"
-        repr += f"```Python\n{self.signature}\n```\n" if self.signature is not None else ''
-        repr += f"{self.docstring.description}\n" if self.docstring.description is not None else ''
+        repr += (
+            f"```Python\n{self.signature}\n```\n" if self.signature is not None else ""
+        )
+        repr += (
+            f"{self.docstring.description}\n"
+            if self.docstring.description is not None
+            else ""
+        )
 
         # Class docstrings will include attributes instead of parameters.
-        param_header = "Parameters" if not isinstance(self, ClassElement) else "Attributes"
+        param_header = (
+            "Parameters" if not isinstance(self, ClassElement) else "Attributes"
+        )
         if len(self.docstring.params) > 0:
-            repr += docstring_metas_to_md_table(param_header, self.level + 1, self.docstring.params)
+            repr += docstring_metas_to_md_table(
+                param_header, self.level + 1, self.docstring.params
+            )
 
         if self.docstring.returns is not None:
-            repr += docstring_metas_to_md_table("Returns", self.level + 1, [self.docstring.returns])
+            repr += docstring_metas_to_md_table(
+                "Returns", self.level + 1, [self.docstring.returns]
+            )
 
         if len(self.docstring.raises) > 0:
-            repr += docstring_metas_to_md_table("Raises", self.level + 1, self.docstring.raises)
-        
+            repr += docstring_metas_to_md_table(
+                "Raises", self.level + 1, self.docstring.raises
+            )
+
         if len(self.docstring.examples) > 0:
-            repr += docstring_metas_to_md_table("Examples", self.level + 1, self.docstring.examples)
+            repr += docstring_metas_to_md_table(
+                "Examples", self.level + 1, self.docstring.examples
+            )
 
         for subc in ["classes", "functions", "methods"]:
             if hasattr(self, subc) and len(getattr(self, subc)) > 0:
-                repr += docstring_metas_to_md_table(subc.capitalize(), self.level + 1, getattr(self, subc))
+                repr += docstring_metas_to_md_table(
+                    subc.capitalize(), self.level + 1, getattr(self, subc)
+                )
 
         for subc in ["classes", "functions", "methods"]:
             if hasattr(self, subc):
                 for element in getattr(self, subc):
-                    repr += f"\n{element.__repr__()}"        
+                    repr += f"\n{element.__repr__()}"
 
         return repr
 
@@ -190,7 +217,7 @@ class FunctionElement(DocToMarkdownElement):
 
 class ClassElement(DocToMarkdownElement):
     """Class for representing class docstrings, which can contain methods as sub-elements.
-    
+
     Attributes
     ----------
     methods : list[FunctionElement]
@@ -210,20 +237,49 @@ class ClassElement(DocToMarkdownElement):
             Whether to include private members (those starting with an underscore) in the documentation.
         """
 
-        signature = f"class {cls.__name__}({', '.join(base_cls.__name__ for base_cls in cls.__bases__)})" if len(cls.__bases__) > 0 else f"class {cls.__name__}"
-        super().__init__(name=cls.__name__, signature=signature, docstring=parse(cls.__doc__ if cls.__doc__ is not None else f"Description for {cls.__name__}", style=Style.NUMPYDOC), level=2)
+        signature = (
+            f"class {cls.__name__}({', '.join(base_cls.__name__ for base_cls in cls.__bases__)})"
+            if len(cls.__bases__) > 0
+            else f"class {cls.__name__}"
+        )
+        super().__init__(
+            name=cls.__name__,
+            signature=signature,
+            docstring=parse(
+                cls.__doc__
+                if cls.__doc__ is not None
+                else f"Description for {cls.__name__}",
+                style=Style.NUMPYDOC,
+            ),
+            level=2,
+        )
 
         target_methods = {
-            method_name: method for method_name, method in cls.__dict__.items() if inspect.isfunction(method) or inspect.ismethod(method) and (include_private or not method_name.startswith('_'))
+            method_name: method
+            for method_name, method in cls.__dict__.items()
+            if inspect.isfunction(method)
+            or inspect.ismethod(method)
+            and (include_private or not method_name.startswith("_"))
         }
         self.methods = [
-            FunctionElement(name=method_name, signature=f"def {method_name}{str(inspect.signature(method))}", docstring=parse(getattr(cls, method_name).__doc__ if getattr(cls, method_name).__doc__ is not None else f"Description for {method_name}()", style=Style.NUMPYDOC), level=3)
+            FunctionElement(
+                name=method_name,
+                signature=f"def {method_name}{str(inspect.signature(method))}",
+                docstring=parse(
+                    getattr(cls, method_name).__doc__
+                    if getattr(cls, method_name).__doc__ is not None
+                    else f"Description for {method_name}()",
+                    style=Style.NUMPYDOC,
+                ),
+                level=3,
+            )
             for method_name, method in target_methods.items()
         ]
 
+
 class ModuleElement(DocToMarkdownElement):
     """Class for representing module docstrings, which can contain classes and functions as sub-elements.
-    
+
     Attributes
     ----------
     classes : list[ClassElement]
@@ -231,14 +287,15 @@ class ModuleElement(DocToMarkdownElement):
     functions : list[FunctionDocstring]
         List of functions defined in the module, represented as FunctionDocstring objects
     """
+
     classes: list[ClassElement]
     functions: list[FunctionElement]
 
     def __init__(self, module: ModuleType, include_private: bool = False):
         """Initialize the ModuleElement with the module's name, signature, docstring, and heading level.
-        
+
         Also parses the classes and functions defined in the module as sub-elements.
-    
+
         Parameters
         ----------
         module : ModuleType
@@ -247,21 +304,42 @@ class ModuleElement(DocToMarkdownElement):
             Whether to include private members (those starting with an underscore) in the documentation.
         """
 
-        super().__init__(name=module.__name__, signature=None, docstring=parse(module.__doc__ if module.__doc__ is not None else f"Description for {module.__name__} module", style=Style.NUMPYDOC), level=1)
+        super().__init__(
+            name=module.__name__,
+            signature=None,
+            docstring=parse(
+                module.__doc__
+                if module.__doc__ is not None
+                else f"Description for {module.__name__} module",
+                style=Style.NUMPYDOC,
+            ),
+            level=1,
+        )
 
         all_classes, all_functions = get_cls_and_func_defined_in_module(module)
 
         self.classes = [
-            ClassElement(cls=cls, include_private=include_private) for cls in all_classes.values()
+            ClassElement(cls=cls, include_private=include_private)
+            for cls in all_classes.values()
         ]
 
         self.functions = [
-            FunctionElement(name=func_name, signature=f"def {func_name}{str(inspect.signature(func))}", docstring=parse(getattr(module, func_name).__doc__ if getattr(module, func_name).__doc__ is not None else f"Description for {func_name}()", style=Style.NUMPYDOC), level=2)
+            FunctionElement(
+                name=func_name,
+                signature=f"def {func_name}{str(inspect.signature(func))}",
+                docstring=parse(
+                    getattr(module, func_name).__doc__
+                    if getattr(module, func_name).__doc__ is not None
+                    else f"Description for {func_name}()",
+                    style=Style.NUMPYDOC,
+                ),
+                level=2,
+            )
             for func_name, func in all_functions.items()
         ]
 
 
-def get_target_python_files(input_path: Path, ignore_private: bool) -> List[Path]:
+def get_target_python_files(input_path: Path, ignore_private: bool) -> list[Path]:
     """Helper function to get list of target python files to process
 
     Parameters
@@ -290,7 +368,7 @@ def get_target_python_files(input_path: Path, ignore_private: bool) -> List[Path
     if ignore_private:
         src_files = []
         for file in all_src_files:
-            if file.name.startswith('_') and file.name != "__init__.py":
+            if file.name.startswith("_") and file.name != "__init__.py":
                 logger.info(f"Ignoring private file {file.name}")
             else:
                 src_files.append(file)
@@ -299,7 +377,9 @@ def get_target_python_files(input_path: Path, ignore_private: bool) -> List[Path
         return all_src_files
 
 
-def npdoc2md(input_path: Path, output_path: Path, ignore_private: bool = False) -> dict[Path, str]:
+def npdoc2md(
+    input_path: Path, output_path: Path, ignore_private: bool = False
+) -> dict[Path, str]:
     """Main function for converting docstrings to markdown
 
     This function orchestrates the process of converting docstrings in Python files to markdown format.
@@ -320,21 +400,19 @@ def npdoc2md(input_path: Path, output_path: Path, ignore_private: bool = False) 
     output_files: dict[Path, str] = {}
 
     for src_file in src_files:
-
         # Import the module to access its docstrings
-        module_name = src_file.stem if src_file.name != "__init__.py" else src_file.parent.stem
+        module_name = (
+            src_file.stem if src_file.name != "__init__.py" else src_file.parent.stem
+        )
         logger.info(f"Processing file {src_file} as module {module_name}")
-        module = importlib.import_module(f".{module_name}", package=input_path.stem if input_path.is_dir() else None)
-        # spec = importlib.util.spec_from_file_location(module_name, src_file, submodule_search_locations=[str(input_path)])
-        # if spec is None or spec.loader is None:
-        #     logger.warning(f"Could not load module from {src_file}. Skipping.")
-        #     continue
-        # module = importlib.util.module_from_spec(spec)
-        # sys.modules[module_name] = module
-        # spec.loader.exec_module(module)
+        module = importlib.import_module(
+            f".{module_name}", package=input_path.stem if input_path.is_dir() else None
+        )
 
-        output_file_path = get_target_output_file_path(src_file, input_path, output_path)
-        md_text =  ModuleElement(module, include_private=ignore_private).__repr__()
+        output_file_path = get_target_output_file_path(
+            src_file, input_path, output_path
+        )
+        md_text = ModuleElement(module, include_private=ignore_private).__repr__()
         output_files[output_file_path] = md_text
 
     return output_files
