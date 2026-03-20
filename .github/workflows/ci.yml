@@ -26,7 +26,7 @@ jobs:
           frozen: true
 
       - name: Run linting checks
-        run: pixi run lint
+        run: pixi run --frozen lint
 
   test:
     name: Unit Tests - Python ${{ matrix.python-version }}
@@ -48,7 +48,7 @@ jobs:
           frozen: true
 
       - name: Run tests for given python version
-        run: pixi run -e py${PYTHON_VERSION//./} pytest --cov=npdoc2md --cov-report=xml --cov-report=term
+        run: pixi run --frozen -e py${PYTHON_VERSION//./} pytest --cov=npdoc2md --cov-report=xml --cov-report=term
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
 
