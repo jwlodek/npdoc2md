@@ -66,4 +66,3 @@ fmt = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 handler.setFormatter(ColorFormatter(fmt, use_color=use_color))
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
-logger.propagate = False

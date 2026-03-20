@@ -8,7 +8,7 @@ from .npdoc2md import npdoc2md
 from .utils import create_output_directory, validate_paths
 
 
-def main():
+def main() -> None:
     """Main entry point for the npdoc2md CLI utility."""
 
     parser = argparse.ArgumentParser(
@@ -33,7 +33,7 @@ def main():
         "--private-whitelist",
         type=str,
         nargs="+",
-        default=["__init__", "__repr__"],
+        default=["__init__"],
         help="List of private member names to include even without --include-private.",
     )
     parser.add_argument(
@@ -71,7 +71,10 @@ def main():
         logger.setLevel(logging.INFO)
 
     for output_file, text in npdoc2md(
-        input_path, output_path, ignore_private=args.ignore_private
+        input_path,
+        output_path,
+        include_private=args.include_private,
+        private_whitelist=args.private_whitelist,
     ).items():
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(text)

@@ -88,8 +88,6 @@ def docstring_metas_to_md_table(name: str, level: int, meta: list[TableItemT]) -
     # Cannot use issubclass w/ DocstringElementProtocol since it's a protocol w/ non-method members
     elif isinstance(meta[0], DocToMarkdownElementProtocol):
         header = f"{'#' * level} {name}\n{' | '.join([name[:-1], 'Description'])}\n{' | '.join(['---'] * 2)}\n"
-    else:
-        raise NotImplementedError(f"Unsupported TableItem type {meta_type}")
 
     table = header
     for item in meta:
@@ -249,7 +247,7 @@ class ClassElement(DocToMarkdownElement):
         self,
         cls: type,
         include_private: bool = False,
-        private_whitelist: list[str] = None,
+        private_whitelist: list[str] | None = None,
     ):
         """Initialize a class's docstring representation.
 
@@ -261,12 +259,10 @@ class ClassElement(DocToMarkdownElement):
             The class to parse for docstrings and sub-elements
         include_private : bool, default=False
             Whether to include private members in the documentation.
-        private_whitelist : list[str], default=[]
+        private_whitelist : list[str], optional
             List of private member names to include even if include_private is False.
         """
 
-        if private_whitelist is None:
-            private_whitelist = []
         bases = ", ".join(base_cls.__name__ for base_cls in cls.__bases__)
         signature = (
             f"class {cls.__name__}({bases})"
@@ -292,7 +288,7 @@ class ClassElement(DocToMarkdownElement):
             and (
                 include_private
                 or not method_name.startswith("_")
-                or method_name in private_whitelist
+                or (private_whitelist and method_name in private_whitelist)
             )
         }
         self.methods = [
@@ -329,7 +325,7 @@ class ModuleElement(DocToMarkdownElement):
         self,
         module: ModuleType,
         include_private: bool = False,
-        private_whitelist: list[str] = None,
+        private_whitelist: list[str] | None = None,
     ):
         """Initialize the ModuleElement with the module's name, docstring, and heading.
 
@@ -339,14 +335,12 @@ class ModuleElement(DocToMarkdownElement):
         ----------
         module : ModuleType
             The module to parse for docstrings and sub-elements
-        include_private : bool, default False
+        include_private : bool, default=False
             Whether to include private members in the documentation.
-        private_whitelist : list[str], default=[]
+        private_whitelist : list[str], optional
             List of private member names to include even if include_private is False.
         """
 
-        if private_whitelist is None:
-            private_whitelist = []
         super().__init__(
             name=module.__name__,
             signature=None,
@@ -428,7 +422,7 @@ def npdoc2md(
     input_path: Path,
     output_path: Path,
     include_private: bool = False,
-    private_whitelist: list[str] = None,
+    private_whitelist: list[str] | None = None,
 ) -> dict[Path, str]:
     """Main function for converting docstrings to markdown
 
@@ -446,10 +440,13 @@ def npdoc2md(
         Whether to ignore private members, by default False
     private_whitelist : list[str], default=[]
         List of private member names to include even if include_private is False
+
+    Returns
+    -------
+    dict[Path, str]
+        A dictionary mapping output file paths to their generated markdown content
     """
 
-    if private_whitelist is None:
-        private_whitelist = []
     src_files = get_target_python_files(input_path, include_private)
     output_files: dict[Path, str] = {}
 
@@ -460,7 +457,8 @@ def npdoc2md(
         )
         logger.info(f"Processing file {src_file} as module {module_name}")
         module = importlib.import_module(
-            f".{module_name}", package=input_path.stem if input_path.is_dir() else None
+            f".{module_name}",
+            package=input_path.stem if input_path.is_dir() else input_path.parent.stem,
         )
 
         output_file_path = get_target_output_file_path(

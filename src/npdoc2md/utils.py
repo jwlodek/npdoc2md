@@ -95,7 +95,20 @@ def get_target_output_file_path(
 def get_cls_and_func_defined_in_module(
     module: ModuleType,
 ) -> tuple[dict[str, type], dict[str, Callable]]:
-    """Get the sets of class and function names defined in a module."""
+    """Get the sets of class and function names defined in a module.
+
+    Parameters
+    ----------
+    module : ModuleType
+        The module to inspect.
+
+    Returns
+    -------
+    tuple[dict[str, type], dict[str, Callable]]
+        A tuple containing two dictionaries: the first maps class names to class
+        objects, and the second maps function names to function objects, for all
+        classes and functions defined in the given module.
+    """
     classes = {
         name: obj
         for name, obj in inspect.getmembers(module, inspect.isclass)

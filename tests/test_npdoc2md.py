@@ -130,8 +130,8 @@ def test_docstring_metas_to_md_table_example_meta():
     example_meta = [
         DocstringExample([], "This is an example snippet", "Example code snippet"),
     ]
-    result = docstring_metas_to_md_table("Example", 2, example_meta)
-    expected = """## Example
+    result = docstring_metas_to_md_table("Examples", 2, example_meta)
+    expected = """## Examples
 Snippet | Description
 --- | ---
 This is an example snippet | Example code snippet
