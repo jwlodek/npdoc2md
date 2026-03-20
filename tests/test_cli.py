@@ -5,11 +5,11 @@ from io import StringIO
 from pathlib import Path
 
 import pytest
+from npdoc2md._version import __version__
 from pytest import LogCaptureFixture, MonkeyPatch
 
 from npdoc2md.__main__ import main
 from npdoc2md._log import COLOR_MAP, ColorFormatter, handler, logger
-from npdoc2md._version import __version__
 
 
 def test_version():
@@ -19,7 +19,9 @@ def test_version():
 
 
 @pytest.mark.parametrize("as_subprocess", [True, False])
-def test_generate_md_from_npdoc2md_utils(tmp_path: Path, as_subprocess: bool, monkeypatch: MonkeyPatch):
+def test_generate_md_from_npdoc2md_utils(
+    tmp_path: Path, as_subprocess: bool, monkeypatch: MonkeyPatch
+):
     output_dir = tmp_path if as_subprocess else tmp_path / "nonexistant_dir"
 
     if as_subprocess:
@@ -30,7 +32,9 @@ def test_generate_md_from_npdoc2md_utils(tmp_path: Path, as_subprocess: bool, mo
         )
         assert result.returncode == 0
     else:
-        monkeypatch.setattr(sys, "argv", ["npdoc2md", "src/npdoc2md/utils.py", str(output_dir)])
+        monkeypatch.setattr(
+            sys, "argv", ["npdoc2md", "src/npdoc2md/utils.py", str(output_dir)]
+        )
         main()
 
     generated_file = output_dir / "utils.md"
@@ -45,20 +49,33 @@ def test_generate_md_from_npdoc2md_utils(tmp_path: Path, as_subprocess: bool, mo
     assert generated_md == expected_md
 
 
-def test_quiet_and_verbose_results_in_verbose_logging(monkeypatch: MonkeyPatch, caplog: LogCaptureFixture, tmp_path: Path):
+def test_quiet_and_verbose_results_in_verbose_logging(
+    monkeypatch: MonkeyPatch, caplog: LogCaptureFixture, tmp_path: Path
+):
     # Test that --quiet overrides --verbose
-    monkeypatch.setattr(sys, "argv", ["npdoc2md", "--verbose", "--quiet", "src/npdoc2md/utils.py", str(tmp_path)])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["npdoc2md", "--verbose", "--quiet", "src/npdoc2md/utils.py", str(tmp_path)],
+    )
 
     with caplog.at_level("DEBUG"):
         main()
 
-    assert "Both --verbose and --quiet flags are set. Defaulting to verbose mode." in caplog.text
+    assert (
+        "Both --verbose and --quiet flags are set. Defaulting to verbose mode."
+        in caplog.text
+    )
     assert logging.getLogger("npdoc2md").getEffectiveLevel() == logging.DEBUG
 
 
-def test_quiet_results_in_only_error_logging(monkeypatch: MonkeyPatch, caplog: LogCaptureFixture, tmp_path: Path):
+def test_quiet_results_in_only_error_logging(
+    monkeypatch: MonkeyPatch, caplog: LogCaptureFixture, tmp_path: Path
+):
     # Test that --quiet results in only error logging
-    monkeypatch.setattr(sys, "argv", ["npdoc2md", "--quiet", "src/npdoc2md/utils.py", str(tmp_path)])
+    monkeypatch.setattr(
+        sys, "argv", ["npdoc2md", "--quiet", "src/npdoc2md/utils.py", str(tmp_path)]
+    )
 
     with caplog.at_level("ERROR"):
         main()
@@ -70,7 +87,11 @@ def test_log_levels_in_color(monkeypatch: MonkeyPatch, tmp_path: Path):
     # Test that log levels are color coded in the output.
     # caplog uses its own formatter (no ANSI codes), so we need to capture
     # the output of our custom ColorFormatter handler directly.
-    monkeypatch.setattr(sys, "argv", ["npdoc2md", "--verbose", "--quiet", "src/npdoc2md/utils.py", str(tmp_path)])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["npdoc2md", "--verbose", "--quiet", "src/npdoc2md/utils.py", str(tmp_path)],
+    )
 
     # Reset the logger level to INFO before running main(), since previous
     # tests may have changed it (e.g. to ERROR via --quiet). The WARNING
@@ -92,5 +113,7 @@ def test_log_levels_in_color(monkeypatch: MonkeyPatch, tmp_path: Path):
 
     # Check that the log levels in the captured output contain ANSI color codes
     assert f"{COLOR_MAP[logging.DEBUG]}DEBUG" in output  # DEBUG should be cyan
-    assert f"{COLOR_MAP[logging.INFO]}INFO" in output   # INFO should be green
-    assert f"{COLOR_MAP[logging.WARNING]}WARNING" in output  # WARNING should be bright yellow
+    assert f"{COLOR_MAP[logging.INFO]}INFO" in output  # INFO should be green
+    assert (
+        f"{COLOR_MAP[logging.WARNING]}WARNING" in output
+    )  # WARNING should be bright yellow
