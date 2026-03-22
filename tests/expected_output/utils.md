@@ -6,6 +6,7 @@ Function | Description
 [create_output_directory](#create_output_directory) | Create the output directory if it does not exist.
 [get_cls_and_func_defined_in_module](#get_cls_and_func_defined_in_module) | Get the sets of class and function names defined in a module.
 [get_target_output_file_path](#get_target_output_file_path) | Get the output file path for a given input file, preserving directory structure.
+[sanitize_signature](#sanitize_signature) | Sanitize a signature by replacing invalid types with their correct names.
 [validate_paths](#validate_paths) | Validate the input and output paths.
 
 ## create_output_directory
@@ -54,6 +55,25 @@ output_base_path | Path | False | N/A | The base path for the output markdown fi
 Type | Variable Name | Is Generator | Description
 --- | --- | --- | ---
 Path | N/A | False | The path to the output markdown file.
+
+## sanitize_signature
+```Python
+def sanitize_signature(signature: str) -> str
+```
+Sanitize a signature by replacing invalid types with their correct names.
+
+This is necessary because some types are represented in the signature
+as their internal names (e.g., '_io.BytesIO' instead of 'io.BytesIO'),
+which can be confusing. This function uses a predefined mapping to replace these
+invalid type representations with their correct, fully qualified names.
+### Parameters
+Parameter | Type | Optional | Default | Description
+--- | --- | --- | --- | ---
+signature | str | False | N/A | The original function or method signature to sanitize.
+### Returns
+Type | Variable Name | Is Generator | Description
+--- | --- | --- | ---
+str | N/A | False | The sanitized signature with invalid types replaced by their correct names.
 
 ## validate_paths
 ```Python

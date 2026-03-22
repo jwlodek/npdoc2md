@@ -1,11 +1,109 @@
 import inspect
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from logging import getLogger
 from pathlib import Path
 from types import ModuleType
+from typing import Final
 
 logger = getLogger("npdoc2md")
+
+
+# Note: The following mapping is vendored from sphix-doc/sphinx:
+# https://github.com/sphinx-doc/sphinx/blob/cc7c6f435ad37bb12264f8118c8461b230e6830c/sphinx/util/typing.py#L50
+_INVALID_BUILTIN_CLASSES: Final[Mapping[tuple[str, str], str]] = {
+    # types from 'contextvars'
+    ("_contextvars", "Context"): "contextvars.Context",
+    ("_contextvars", "ContextVar"): "contextvars.ContextVar",
+    ("_contextvars", "Token"): "contextvars.Token",
+    # types from 'ctypes':
+    ("_ctypes", "Array"): "ctypes.Array",
+    ("_ctypes", "Structure"): "ctypes.Structure",
+    ("_ctypes", "Union"): "ctypes.Union",
+    # types from 'io':
+    ("_io", "BufferedRandom"): "io.BufferedRandom",
+    ("_io", "BufferedReader"): "io.BufferedReader",
+    ("_io", "BufferedRWPair"): "io.BufferedRWPair",
+    ("_io", "BufferedWriter"): "io.BufferedWriter",
+    ("_io", "BytesIO"): "io.BytesIO",
+    ("_io", "FileIO"): "io.FileIO",
+    ("_io", "StringIO"): "io.StringIO",
+    ("_io", "TextIOWrapper"): "io.TextIOWrapper",
+    # types from 'json':
+    ("json.decoder", "JSONDecoder"): "json.JSONDecoder",
+    ("json.encoder", "JSONEncoder"): "json.JSONEncoder",
+    # types from 'lzma':
+    ("_lzma", "LZMACompressor"): "lzma.LZMACompressor",
+    ("_lzma", "LZMADecompressor"): "lzma.LZMADecompressor",
+    # types from 'multiprocessing':
+    ("multiprocessing.context", "Process"): "multiprocessing.Process",
+    # types from 'pathlib':
+    ("pathlib._local", "Path"): "pathlib.Path",
+    ("pathlib._local", "PosixPath"): "pathlib.PosixPath",
+    ("pathlib._local", "PurePath"): "pathlib.PurePath",
+    ("pathlib._local", "PurePosixPath"): "pathlib.PurePosixPath",
+    ("pathlib._local", "PureWindowsPath"): "pathlib.PureWindowsPath",
+    ("pathlib._local", "WindowsPath"): "pathlib.WindowsPath",
+    # types from 'pickle':
+    ("_pickle", "Pickler"): "pickle.Pickler",
+    ("_pickle", "Unpickler"): "pickle.Unpickler",
+    # types from 'struct':
+    ("_struct", "Struct"): "struct.Struct",
+    # types from 'types':
+    ("builtins", "async_generator"): "types.AsyncGeneratorType",
+    ("builtins", "builtin_function_or_method"): "types.BuiltinMethodType",
+    ("builtins", "cell"): "types.CellType",
+    ("builtins", "classmethod_descriptor"): "types.ClassMethodDescriptorType",
+    ("builtins", "code"): "types.CodeType",
+    ("builtins", "coroutine"): "types.CoroutineType",
+    ("builtins", "ellipsis"): "types.EllipsisType",
+    ("builtins", "frame"): "types.FrameType",
+    ("builtins", "function"): "types.LambdaType",
+    ("builtins", "generator"): "types.GeneratorType",
+    ("builtins", "getset_descriptor"): "types.GetSetDescriptorType",
+    ("builtins", "mappingproxy"): "types.MappingProxyType",
+    ("builtins", "member_descriptor"): "types.MemberDescriptorType",
+    ("builtins", "method"): "types.MethodType",
+    ("builtins", "method-wrapper"): "types.MethodWrapperType",
+    ("builtins", "method_descriptor"): "types.MethodDescriptorType",
+    ("builtins", "module"): "types.ModuleType",
+    ("builtins", "NoneType"): "types.NoneType",
+    ("builtins", "NotImplementedType"): "types.NotImplementedType",
+    ("builtins", "traceback"): "types.TracebackType",
+    ("builtins", "wrapper_descriptor"): "types.WrapperDescriptorType",
+    # types from 'weakref':
+    ("_weakrefset", "WeakSet"): "weakref.WeakSet",
+    # types from 'zipfile':
+    ("zipfile._path", "CompleteDirs"): "zipfile.CompleteDirs",
+    ("zipfile._path", "Path"): "zipfile.Path",
+}
+
+
+def sanitize_signature(signature: str) -> str:
+    """Sanitize a signature by replacing invalid types with their correct names.
+
+    This is necessary because some types are represented in the signature
+    as their internal names (e.g., '_io.BytesIO' instead of 'io.BytesIO'),
+    which can be confusing. This function uses a predefined mapping to replace these
+    invalid type representations with their correct, fully qualified names.
+
+    Parameters
+    ----------
+    signature : str
+        The original function or method signature to sanitize.
+
+    Returns
+    -------
+    str
+        The sanitized signature with invalid types replaced by their correct names.
+    """
+
+    for (module_name, type_name), correct_type in _INVALID_BUILTIN_CLASSES.items():
+        invalid_type = f"{module_name}.{type_name}"
+        if invalid_type in signature:
+            signature = signature.replace(invalid_type, correct_type)
+
+    return signature
 
 
 def create_output_directory(output_path: Path) -> None:

@@ -58,6 +58,7 @@ def test_quiet_and_verbose_results_in_verbose_logging(
         "argv",
         ["npdoc2md", "--verbose", "--quiet", "src/npdoc2md/utils.py", str(tmp_path)],
     )
+    logger.propagate = True  # Ensure that log messages propagate to caplog
 
     with caplog.at_level("DEBUG"):
         main()
@@ -76,6 +77,7 @@ def test_quiet_results_in_only_error_logging(
     monkeypatch.setattr(
         sys, "argv", ["npdoc2md", "--quiet", "src/npdoc2md/utils.py", str(tmp_path)]
     )
+    logger.propagate = True  # Ensure that log messages propagate to caplog
 
     with caplog.at_level("ERROR"):
         main()
@@ -92,7 +94,6 @@ def test_log_levels_in_color(monkeypatch: MonkeyPatch, tmp_path: Path):
         "argv",
         ["npdoc2md", "--verbose", "--quiet", "src/npdoc2md/utils.py", str(tmp_path)],
     )
-
     # Reset the logger level to INFO before running main(), since previous
     # tests may have changed it (e.g. to ERROR via --quiet). The WARNING
     # message in main() is emitted *before* --verbose sets the level to DEBUG,

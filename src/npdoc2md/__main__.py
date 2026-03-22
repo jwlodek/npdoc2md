@@ -77,7 +77,10 @@ def main() -> None:
         private_whitelist=args.private_whitelist,
     ).items():
         with open(output_file, "w", encoding="utf-8") as f:
+            logger.info(f"Writing {output_file}...")
             f.write(text)
+
+    logger.info("Markdown generation completed successfully.")
 
 
 if __name__ == "__main__":

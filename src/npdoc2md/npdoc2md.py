@@ -27,7 +27,11 @@ from docstring_parser import (
 )
 from docstring_parser.common import DocstringExample
 
-from .utils import get_cls_and_func_defined_in_module, get_target_output_file_path
+from .utils import (
+    get_cls_and_func_defined_in_module,
+    get_target_output_file_path,
+    sanitize_signature,
+)
 
 logger = logging.getLogger("npdoc2md")
 
@@ -294,7 +298,7 @@ class ClassElement(DocToMarkdownElement):
         self.methods = [
             FunctionElement(
                 name=method_name,
-                signature=f"def {method_name}{str(inspect.signature(method))}",
+                signature=f"def {method_name}{sanitize_signature(str(inspect.signature(method)))}",  # noqa: E501
                 docstring=parse(
                     getattr(cls, method_name).__doc__
                     if getattr(cls, method_name).__doc__ is not None
@@ -367,7 +371,7 @@ class ModuleElement(DocToMarkdownElement):
         self.functions = [
             FunctionElement(
                 name=func_name,
-                signature=f"def {func_name}{str(inspect.signature(func))}",
+                signature=f"def {func_name}{sanitize_signature(str(inspect.signature(func)))}",  # noqa: E501
                 docstring=parse(
                     getattr(module, func_name).__doc__
                     if getattr(module, func_name).__doc__ is not None
@@ -377,10 +381,15 @@ class ModuleElement(DocToMarkdownElement):
                 level=2,
             )
             for func_name, func in all_functions.items()
+            if not func_name.startswith("_")
+            or include_private
+            or (private_whitelist and func_name in private_whitelist)
         ]
 
 
-def get_target_python_files(input_path: Path, include_private: bool) -> list[Path]:
+def get_target_python_files(
+    input_path: Path, include_private: bool, private_whitelist: list[str] | None
+) -> list[Path]:
     """Helper function to get list of target python files to process
 
     Parameters
@@ -409,7 +418,9 @@ def get_target_python_files(input_path: Path, include_private: bool) -> list[Pat
     if not include_private:
         src_files = []
         for file in all_src_files:
-            if file.name.startswith("_") and file.name != "__init__.py":
+            if file.name.startswith("_") and (
+                private_whitelist is None or file.name not in private_whitelist
+            ):
                 logger.info(f"Ignoring private file {file.name}")
             else:
                 src_files.append(file)
@@ -447,7 +458,8 @@ def npdoc2md(
         A dictionary mapping output file paths to their generated markdown content
     """
 
-    src_files = get_target_python_files(input_path, include_private)
+    logger.info(f"Searching for Python files in {input_path}...")
+    src_files = get_target_python_files(input_path, include_private, private_whitelist)
     output_files: dict[Path, str] = {}
 
     for src_file in src_files:
@@ -456,10 +468,12 @@ def npdoc2md(
             src_file.stem if src_file.name != "__init__.py" else src_file.parent.stem
         )
         logger.info(f"Processing file {src_file} as module {module_name}")
+        logger.debug(f"Importing module {module_name} from file {src_file}...")
         module = importlib.import_module(
             f".{module_name}",
             package=input_path.stem if input_path.is_dir() else input_path.parent.stem,
         )
+        logger.debug(f"Successfully imported module {module_name}")
 
         output_file_path = get_target_output_file_path(
             src_file, input_path, output_path
