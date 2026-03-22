@@ -5,8 +5,23 @@ from npdoc2md.utils import (
     create_output_directory,
     get_cls_and_func_defined_in_module,
     get_target_output_file_path,
+    sanitize_signature,
     validate_paths,
 )
+
+
+@pytest.mark.parametrize(
+    "signature, expected",
+    [
+        ("(io: _io.BytesIO) -> None", "(io: io.BytesIO) -> None"),
+        (
+            "(path: pathlib._local.Path) -> pathlib._local.Path",
+            "(path: pathlib.Path) -> pathlib.Path",
+        ),
+    ],
+)
+def test_sanitize_signature(signature, expected):
+    assert sanitize_signature(signature) == expected
 
 
 def test_create_output_directory(tmp_path):

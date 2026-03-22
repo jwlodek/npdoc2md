@@ -18,13 +18,26 @@ from npdoc2md.npdoc2md import (
 
 
 @pytest.mark.parametrize(
-    "include_private, expected_files",
+    "include_private, private_whitelist, expected_files",
     [
-        (True, {"file1.py", "__init__.py", "subdir/file4.py", "_file5.py"}),
-        (False, {"file1.py", "__init__.py", "subdir/file4.py"}),
+        (True, [], {"file1.py", "__init__.py", "subdir/file4.py", "_file5.py"}),
+        (
+            True,
+            ["__init__.py"],
+            {"file1.py", "__init__.py", "subdir/file4.py", "_file5.py"},
+        ),
+        (False, ["__init__.py"], {"file1.py", "__init__.py", "subdir/file4.py"}),
+        (
+            False,
+            ["__init__.py", "_file5.py"],
+            {"file1.py", "__init__.py", "subdir/file4.py", "_file5.py"},
+        ),
+        (False, [], {"file1.py", "subdir/file4.py"}),
     ],
 )
-def test_get_target_python_files(tmp_path, include_private, expected_files):
+def test_get_target_python_files(
+    tmp_path, include_private, private_whitelist, expected_files
+):
     # Create a temporary directory with some Python files and other files
     dir_path = tmp_path / "test_dir"
     dir_path.mkdir()
@@ -38,7 +51,7 @@ def test_get_target_python_files(tmp_path, include_private, expected_files):
     (dir_path / "_file5.py").touch()  # Private file
 
     # Test that get_target_python_files returns only .py files
-    python_files = get_target_python_files(dir_path, include_private)
+    python_files = get_target_python_files(dir_path, include_private, private_whitelist)
     expected_files = {dir_path / file for file in expected_files}
     assert set(python_files) == expected_files
 
