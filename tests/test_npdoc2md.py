@@ -32,7 +32,7 @@ from npdoc2md.npdoc2md import (
             ["__init__.py", "_file5.py"],
             {"file1.py", "__init__.py", "subdir/file4.py", "_file5.py"},
         ),
-        (False, [], {"file1.py", "subdir/file4.py"}),
+        (False, [], {"file1.py", "__init__.py", "subdir/file4.py"}),
     ],
 )
 def test_get_target_python_files(

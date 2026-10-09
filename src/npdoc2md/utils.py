@@ -184,6 +184,9 @@ def get_target_output_file_path(
         else Path(input_file.name)
     )
 
+    if relative_path.name == "__init__.py":
+        relative_path = relative_path.with_name(input_file.parent.name)
+
     # Build the output file path by joining the output base path with the rel path
     output_file = output_base_path / relative_path.with_suffix(".md")
 
@@ -207,14 +210,22 @@ def get_cls_and_func_defined_in_module(
         objects, and the second maps function names to function objects, for all
         classes and functions defined in the given module.
     """
+    public_names = getattr(module, "__all__", None)
+
+    def is_target(name: str, obj: object) -> bool:
+        # __all__ is authoritative, so re-exported members are included
+        if public_names is not None:
+            return name in public_names
+        return getattr(obj, "__module__", None) == module.__name__
+
     classes = {
         name: obj
         for name, obj in inspect.getmembers(module, inspect.isclass)
-        if obj.__module__ == module.__name__
+        if is_target(name, obj)
     }
     functions = {
         name: obj
         for name, obj in inspect.getmembers(module, inspect.isfunction)
-        if obj.__module__ == module.__name__
+        if is_target(name, obj)
     }
     return classes, functions

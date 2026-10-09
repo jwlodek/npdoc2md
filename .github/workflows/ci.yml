@@ -1,11 +1,14 @@
 ---
 
 name: CI
+permissions:
+  contents: read
+
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -14,49 +17,57 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - name: Setup pixi
-        uses: prefix-dev/setup-pixi@8ca4608ef7f4daeb54f5205b20d0b7cb42f11143  # v0.8.14
-        with:
-          pixi-version: v0.56.0
-          cache: false
-          frozen: true
+      - name: Setup uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
 
-      - name: Run linting checks
-        run: pixi run --frozen lint
+      - name: Lint
+        run: uv run --frozen pre-commit run --all-files
+
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: Run type checks
+        run: uv run --frozen ty check src tests
 
   test:
     name: Unit Tests - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+      fail-fast: false
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - name: Setup pixi
-        uses: prefix-dev/setup-pixi@8ca4608ef7f4daeb54f5205b20d0b7cb42f11143  # v0.8.14
+      - name: Setup uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          pixi-version: v0.56.0
-          cache: true
-          frozen: true
+          python-version: ${{ matrix.python-version }}
 
       - name: Run tests for given python version
-        run: pixi run --frozen -e py${PYTHON_VERSION//./} pytest --cov=npdoc2md --cov-report=xml --cov-report=term
-        env:
-          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: uv run --frozen pytest --cov=src/npdoc2md --cov-report=xml --cov-report=term
 
-      - name: Upload coverage to Codecov
+      - name: Upload Coverage To Codecov
+        if: ${{ matrix.python-version == '3.13' }}
         uses: codecov/codecov-action@v5
-        if: ${{ matrix.python-version == '3.13' }}  # Only upload coverage for Python 3.13 to avoid duplicates
         with:
           name: Coverage
           files: coverage.xml
-          fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}

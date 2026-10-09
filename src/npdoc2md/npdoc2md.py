@@ -418,8 +418,10 @@ def get_target_python_files(
     if not include_private:
         src_files = []
         for file in all_src_files:
-            if file.name.startswith("_") and (
-                private_whitelist is None or file.name not in private_whitelist
+            if (
+                file.name.startswith("_")
+                and file.name != "__init__.py"
+                and (private_whitelist is None or file.name not in private_whitelist)
             ):
                 logger.info(f"Ignoring private file {file.name}")
             else:
@@ -464,15 +466,15 @@ def npdoc2md(
 
     for src_file in src_files:
         # Import the module to access its docstrings
-        module_name = (
-            src_file.stem if src_file.name != "__init__.py" else src_file.parent.stem
-        )
+        package_dir = input_path if input_path.is_dir() else input_path.parent
+        rel_parts = src_file.relative_to(package_dir).with_suffix("").parts
+        parts = [package_dir.stem, *rel_parts]
+        if parts[-1] == "__init__":
+            parts.pop()
+        module_name = ".".join(parts)
         logger.info(f"Processing file {src_file} as module {module_name}")
         logger.debug(f"Importing module {module_name} from file {src_file}...")
-        module = importlib.import_module(
-            f".{module_name}",
-            package=input_path.stem if input_path.is_dir() else input_path.parent.stem,
-        )
+        module = importlib.import_module(module_name)
         logger.debug(f"Successfully imported module {module_name}")
 
         output_file_path = get_target_output_file_path(

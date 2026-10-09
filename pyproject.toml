@@ -122,46 +122,8 @@ exclude = [
 [tool.importlinter]
 root_package = "npdoc2md"
 
-[tool.pixi.workspace]
-channels = ["conda-forge"]
-platforms = ["linux-64"]
-
-[tool.pixi.environments]
-default = { solve-group = "default" }
-py310 = ["py310"]
-py311 = ["py311"]
-py312 = ["py312"]
-py313 = ["py313"]
-py314 = ["py314"]
-
-# Default dependencies
-[tool.pixi.dependencies]
-pytest = ">=9.0.1,<10"
-pre-commit = ">=4.4.0,<5"
-ruff = ">=0.15.0,<0.16"
-tox = ">=4.32.0,<5"
-pytest-cov = ">=7.0.0,<8"
-import-linter = ">=2.7,<3"
-python = "*"
-
-[tool.pixi.tasks]
-lint = "pre-commit run --all-files"
-
-[tool.pixi.pypi-dependencies]
-npdoc2md = { path = ".", editable = true }
-
-# Define features for other python versions for matrix testing on CI.
-[tool.pixi.feature.py310.dependencies]
-python = "3.10.*"
-
-[tool.pixi.feature.py311.dependencies]
-python = "3.11.*"
-
-[tool.pixi.feature.py312.dependencies]
-python = "3.12.*"
-
-[tool.pixi.feature.py313.dependencies]
-python = "3.13.*"
-
-[tool.pixi.feature.py314.dependencies]
-python = "3.14.*"
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ty>=0.0.85",
+]
