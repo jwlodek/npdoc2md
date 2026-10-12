@@ -733,6 +733,7 @@ name = "npdoc2md"
 source = { editable = "." }
 dependencies = [
     { name = "docstring-parser" },
+    { name = "import-linter" },
 ]
 
 [package.optional-dependencies]
@@ -760,6 +761,7 @@ dev = [
 requires-dist = [
     { name = "copier", marker = "extra == 'dev'" },
     { name = "docstring-parser", git = "https://github.com/rr-/docstring_parser" },
+    { name = "import-linter", specifier = ">=2.15" },
     { name = "import-linter", marker = "extra == 'dev'" },
     { name = "pipdeptree", marker = "extra == 'dev'" },
     { name = "pre-commit", marker = "extra == 'dev'" },

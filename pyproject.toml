@@ -19,6 +19,7 @@ description = "CLI utility for autogenerating markdown docs from numpy-style doc
 # so for now install branch version from git with my fixes.
 dependencies = [
     "docstring_parser@git+https://github.com/rr-/docstring_parser",
+    "import-linter>=2.15",
 ]
 
 dynamic = ["version"]
