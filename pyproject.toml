@@ -124,6 +124,7 @@ root_package = "npdoc2md"
 
 [dependency-groups]
 dev = [
+    "pre-commit>=4.6.2",
     "pytest>=9.1.1",
     "ty>=0.0.85",
 ]
