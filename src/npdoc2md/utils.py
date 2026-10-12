@@ -1,9 +1,9 @@
 import inspect
 import os
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from logging import getLogger
 from pathlib import Path
-from types import ModuleType
+from types import FunctionType, ModuleType
 from typing import Final
 
 logger = getLogger("npdoc2md")
@@ -195,7 +195,7 @@ def get_target_output_file_path(
 
 def get_cls_and_func_defined_in_module(
     module: ModuleType,
-) -> tuple[dict[str, type], dict[str, Callable]]:
+) -> tuple[dict[str, type], dict[str, FunctionType]]:
     """Get the sets of class and function names defined in a module.
 
     Parameters
@@ -205,7 +205,7 @@ def get_cls_and_func_defined_in_module(
 
     Returns
     -------
-    tuple[dict[str, type], dict[str, Callable]]
+    tuple[dict[str, type], dict[str, FunctionType]]
         A tuple containing two dictionaries: the first maps class names to class
         objects, and the second maps function names to function objects, for all
         classes and functions defined in the given module.

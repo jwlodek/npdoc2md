@@ -26,7 +26,7 @@ PermissionError | If the output directory cannot be created due to permission is
 
 ## get_cls_and_func_defined_in_module
 ```Python
-def get_cls_and_func_defined_in_module(module: module) -> tuple[dict[str, type], dict[str, collections.abc.Callable]]
+def get_cls_and_func_defined_in_module(module: module) -> tuple[dict[str, type], dict[str, function]]
 ```
 Get the sets of class and function names defined in a module.
 
@@ -37,7 +37,7 @@ module | ModuleType | False | N/A | The module to inspect.
 ### Returns
 Type | Variable Name | Is Generator | Description
 --- | --- | --- | ---
-tuple[dict[str, type], dict[str, Callable]] | N/A | False | A tuple containing two dictionaries: the first maps class names to class objects, and the second maps function names to function objects, for all classes and functions defined in the given module.
+tuple[dict[str, type], dict[str, FunctionType]] | N/A | False | A tuple containing two dictionaries: the first maps class names to class objects, and the second maps function names to function objects, for all classes and functions defined in the given module.
 
 ## get_target_output_file_path
 ```Python
