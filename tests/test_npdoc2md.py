@@ -232,6 +232,7 @@ name | str | False | N/A | Name of the element (ex: function name, class name)
 docstring | Docstring | False | N/A | Parsed docstring object for the element
 signature | str | False | N/A | Signature of the element (ex: function signature)
 level | int | False | N/A | Heading level for the element in the markdown documentation. For example, 1 for module, 2 for class, 3 for method.
+
 ### Methods
 Method | Description
 --- | ---
@@ -264,3 +265,36 @@ Type | Variable Name | Is Generator | Description
 str | N/A | False | Markdown representation of the element.
 """  # noqa: E501
     assert element.__repr__() == expected_repr
+
+
+def test_docstring_element_repr_separates_section_headings():
+    docstring = parse(
+        """Do something.
+
+        Longer description.
+
+        Parameters
+        ----------
+        x : int
+            The input.
+
+        Returns
+        -------
+        int
+            The output.
+
+        Raises
+        ------
+        ValueError
+            If x is negative.
+        """,
+        style=Style.NUMPYDOC,
+    )
+    element = DocToMarkdownElement("func", docstring, level=2, signature="def func(x)")
+    lines = repr(element).splitlines()
+
+    # Without a blank line first, Markdown renders a heading that follows a
+    # table as another table row, and one that follows a paragraph as text.
+    for heading in ("### Parameters", "### Returns", "### Raises"):
+        idx = lines.index(heading)
+        assert lines[idx - 1] == "", f"{heading} is not preceded by a blank line"
