@@ -196,31 +196,49 @@ class DocToMarkdownElement(DocToMarkdownElementProtocol):
         param_header = (
             "Parameters" if not isinstance(self, ClassElement) else "Attributes"
         )
+        sections: list[str] = []
         if len(self.docstring.params) > 0:
-            repr += docstring_metas_to_md_table(
-                param_header, self.level + 1, self.docstring.params
+            sections.append(
+                docstring_metas_to_md_table(
+                    param_header, self.level + 1, self.docstring.params
+                )
             )
 
         if self.docstring.returns is not None:
-            repr += docstring_metas_to_md_table(
-                "Returns", self.level + 1, [self.docstring.returns]
+            sections.append(
+                docstring_metas_to_md_table(
+                    "Returns", self.level + 1, [self.docstring.returns]
+                )
             )
 
         if len(self.docstring.raises) > 0:
-            repr += docstring_metas_to_md_table(
-                "Raises", self.level + 1, self.docstring.raises
+            sections.append(
+                docstring_metas_to_md_table(
+                    "Raises", self.level + 1, self.docstring.raises
+                )
             )
 
         if len(self.docstring.examples) > 0:
-            repr += docstring_metas_to_md_table(
-                "Examples", self.level + 1, self.docstring.examples
+            sections.append(
+                docstring_metas_to_md_table(
+                    "Examples", self.level + 1, self.docstring.examples
+                )
             )
 
         for subc in ["classes", "functions", "methods"]:
             if hasattr(self, subc) and len(getattr(self, subc)) > 0:
-                repr += docstring_metas_to_md_table(
-                    subc.capitalize(), self.level + 1, getattr(self, subc)
+                sections.append(
+                    docstring_metas_to_md_table(
+                        subc.capitalize(), self.level + 1, getattr(self, subc)
+                    )
                 )
+
+        # Markdown continues a table or paragraph until a blank line, so a
+        # heading right after one would render as a table row or plain text.
+        for section in sections:
+            if section and not repr.endswith("\n\n"):
+                repr += "\n"
+            repr += section
 
         for subc in ["classes", "functions", "methods"]:
             if hasattr(self, subc):

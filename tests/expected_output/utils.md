@@ -1,5 +1,6 @@
 # npdoc2md.utils
 Description for npdoc2md.utils module
+
 ## Functions
 Function | Description
 --- | ---
@@ -19,6 +20,7 @@ Create the output directory if it does not exist.
 Parameter | Type | Optional | Default | Description
 --- | --- | --- | --- | ---
 output_path | Path | False | N/A | The path to the output directory.
+
 ### Raises
 Error | Description
 --- | ---
@@ -34,6 +36,7 @@ Get the sets of class and function names defined in a module.
 Parameter | Type | Optional | Default | Description
 --- | --- | --- | --- | ---
 module | ModuleType | False | N/A | The module to inspect.
+
 ### Returns
 Type | Variable Name | Is Generator | Description
 --- | --- | --- | ---
@@ -51,6 +54,7 @@ Parameter | Type | Optional | Default | Description
 input_file | Path | False | N/A | The path to the input Python file.
 input_base_path | Path | False | N/A | The base path of the input files (used to determine relative paths).
 output_base_path | Path | False | N/A | The base path for the output markdown files.
+
 ### Returns
 Type | Variable Name | Is Generator | Description
 --- | --- | --- | ---
@@ -66,10 +70,12 @@ This is necessary because some types are represented in the signature
 as their internal names (e.g., '_io.BytesIO' instead of 'io.BytesIO'),
 which can be confusing. This function uses a predefined mapping to replace these
 invalid type representations with their correct, fully qualified names.
+
 ### Parameters
 Parameter | Type | Optional | Default | Description
 --- | --- | --- | --- | ---
 signature | str | False | N/A | The original function or method signature to sanitize.
+
 ### Returns
 Type | Variable Name | Is Generator | Description
 --- | --- | --- | ---
@@ -83,6 +89,7 @@ Validate the input and output paths.
 
 Checks if the input path exists and is readable, and if the output path
 is a directory that can be created or is writable.
+
 ### Raises
 Error | Description
 --- | ---
